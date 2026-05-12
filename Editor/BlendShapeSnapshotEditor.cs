@@ -24,6 +24,20 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             window.Show();
         }
 
+        [MenuItem("Tools/Test 1")]
+        public static void ASD()
+        {
+            var asset = ScriptableObject.CreateInstance<SnapshotInfo>();
+            const string path = "Assets/BlendShapeSnapshot.asset";
+
+            AssetDatabase.CreateAsset(asset, path);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            EditorUtility.FocusProjectWindow();
+            Selection.activeObject = asset;
+        }
+
         private void OnEnable()
         {
             CreatePreview();
