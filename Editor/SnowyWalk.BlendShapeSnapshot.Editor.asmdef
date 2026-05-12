@@ -1,0 +1,18 @@
+{
+    "name": "SnowyWalk.BlendShapeSnapshot.Editor",
+    "rootNamespace": "SnowyWalk.BlendShapeSnapshot.Editor",
+    "references": [
+        "GUID:3c4ea234d5a4d4b4691958e9e8267220"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
