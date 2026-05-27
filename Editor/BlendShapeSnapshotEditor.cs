@@ -46,10 +46,14 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
 
         private void OnGUI()
         {
-            EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField("대상 Mesh");
-            m_targetMeshRenderer = EditorGUILayout.ObjectField(m_targetMeshRenderer, typeof(SkinnedMeshRenderer), true, GUILayout.ExpandWidth(true)) as SkinnedMeshRenderer;
-            EditorGUILayout.EndHorizontal();
+            {
+                const string label = "대상 Mesh";
+                EditorGUIUtility.labelWidth = EditorStyles.label.CalcSize(new GUIContent(label)).x + 8f;
+                m_targetMeshRenderer = EditorGUILayout.ObjectField(label, m_targetMeshRenderer, typeof(SkinnedMeshRenderer), true, GUILayout.ExpandWidth(true)) as SkinnedMeshRenderer;
+                EditorGUIUtility.labelWidth = 0f;
+            }
+            
+            
         }
     }
 }
