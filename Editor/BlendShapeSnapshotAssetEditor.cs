@@ -3,7 +3,7 @@ using UnityEngine;
 namespace SnowyWalk.BlendShapeSnapshot.Editor
 {
     [CustomEditor(typeof(BlendShapeSnapshotAsset))]
-    public class BlendShapeSnapshotInfoEditor : UnityEditor.Editor
+    public class BlendShapeSnapshotAssetEditor : UnityEditor.Editor
     {
         private bool m_isBlendShapeListOpen = true;
 
