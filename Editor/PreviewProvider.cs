@@ -4,11 +4,11 @@ using UnityEngine;
 
 namespace SnowyWalk.BlendShapeSnapshot.Editor
 {
-    public class PreviewProvider : IEditorWindowProvider
+    public class SnapshotPreviewRenderer : IEditorWindowModule
     {
         private PreviewRenderUtility m_previewRenderUtility;
 
-        public void Init(GameObject targetGameObject, BlendShapeSnapshotInfo blendShapeSnapshotInfo)
+        public void Init(GameObject targetGameObject, BlendShapeSnapshotAsset blendShapeSnapshotAsset)
         {
             m_previewRenderUtility.Cleanup();
             m_previewRenderUtility.AddSingleGO(GetRootGameObject(targetGameObject.transform));
@@ -16,13 +16,13 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             UpdateCamera();
         }
 
-        void IEditorWindowProvider.OnEnable()
+        void IEditorWindowModule.OnEnable()
         {
             m_previewRenderUtility = new PreviewRenderUtility();
             SceneView.duringSceneGui += OnSceneViewUpdate;
         }
 
-        void IEditorWindowProvider.OnDisable()
+        void IEditorWindowModule.OnDisable()
         {
             m_previewRenderUtility.Cleanup();
             

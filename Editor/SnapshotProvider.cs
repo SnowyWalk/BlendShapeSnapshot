@@ -3,15 +3,15 @@ using UnityEditor;
 using UnityEngine;
 namespace SnowyWalk.BlendShapeSnapshot.Editor
 {
-    public class SnapshotProvider : IEditorWindowProvider
+    public class SnapshotRepository : IEditorWindowModule
     {
         private const string m_path = "Assets/BlendShapeSnapshots";
 
-        void IEditorWindowProvider.OnEnable()
+        void IEditorWindowModule.OnEnable()
         {
         }
 
-        void IEditorWindowProvider.OnDisable()
+        void IEditorWindowModule.OnDisable()
         {
         }
 
@@ -19,13 +19,13 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
         {
             var smr = targetGameObject.GetComponent<SkinnedMeshRenderer>();
 
-            BlendShapeSnapshotInfo blendShapeSnapshotInfo = ScriptableObject.CreateInstance<BlendShapeSnapshotInfo>();
+            BlendShapeSnapshotAsset blendShapeSnapshotAsset = ScriptableObject.CreateInstance<BlendShapeSnapshotAsset>();
             int blendShapeCount = smr.sharedMesh.blendShapeCount;
             for (int i = 0; i < blendShapeCount; i++)
             {
                 string name = smr.sharedMesh.GetBlendShapeName(i);
                 float value = smr.GetBlendShapeWeight(i);
-                blendShapeSnapshotInfo.AddBlendShapeKey(name, value);
+                blendShapeSnapshotAsset.AddBlendShapeKey(name, value);
             }
             
             // targetGameObject.get
@@ -33,7 +33,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
 
         private void Save()
         {
-            var asset = ScriptableObject.CreateInstance<BlendShapeSnapshotInfo>();
+            var asset = ScriptableObject.CreateInstance<BlendShapeSnapshotAsset>();
 
             AssetDatabase.CreateAsset(asset, Path.Combine(m_path, "BlendShapeSnapshot.asset"));
             AssetDatabase.SaveAssets();

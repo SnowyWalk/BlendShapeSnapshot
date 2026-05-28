@@ -4,22 +4,22 @@ using System.Linq;
 using UnityEngine;
 namespace SnowyWalk.BlendShapeSnapshot
 {
-    public class BlendShapeSnapshotInfo : ScriptableObject
+    public class BlendShapeSnapshotAsset : ScriptableObject
     {
         [Serializable]
-        private class BlendShapeKeyData
+        private class BlendShapeKeyEntry
         {
             public string BlendShapeKey;
             public float Value;
             
-            public BlendShapeKeyData(string blendShapeKey, float value)
+            public BlendShapeKeyEntry(string blendShapeKey, float value)
             {
                 BlendShapeKey = blendShapeKey;
                 Value = value;
             }
         }
         
-        private List<BlendShapeKeyData> m_blendShapeKeyDataList = new List<BlendShapeKeyData>();
+        private List<BlendShapeKeyEntry> m_blendShapeKeyDataList = new List<BlendShapeKeyEntry>();
         private DateTime m_snapshotTime;
         private string m_description;
         
@@ -28,7 +28,7 @@ namespace SnowyWalk.BlendShapeSnapshot
         
         public void AddBlendShapeKey(string blendShapeKey, float value)
         {
-            m_blendShapeKeyDataList.Add(new BlendShapeKeyData(blendShapeKey, value));
+            m_blendShapeKeyDataList.Add(new BlendShapeKeyEntry(blendShapeKey, value));
         }
         
         public IEnumerable<(string blendShapeKey, float value)> BlendShapeKeyDataList => m_blendShapeKeyDataList.Select(e => (e.BlendShapeKey, e.Value));

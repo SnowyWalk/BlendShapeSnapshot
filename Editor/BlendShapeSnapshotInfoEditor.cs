@@ -2,22 +2,22 @@ using UnityEditor;
 using UnityEngine;
 namespace SnowyWalk.BlendShapeSnapshot.Editor
 {
-    [CustomEditor(typeof(BlendShapeSnapshotInfo))]
+    [CustomEditor(typeof(BlendShapeSnapshotAsset))]
     public class BlendShapeSnapshotInfoEditor : UnityEditor.Editor
     {
         private bool m_isBlendShapeListOpen = true;
 
         public override void OnInspectorGUI()
         {
-            BlendShapeSnapshotInfo info = (BlendShapeSnapshotInfo)target;
+            BlendShapeSnapshotAsset asset = (BlendShapeSnapshotAsset)target;
             serializedObject.Update();
 
-            EditorGUILayout.LabelField($"Description: {info.Description}");
-            EditorGUILayout.LabelField($"Snapshot Time: {info.SnapshotTime}");
+            EditorGUILayout.LabelField($"Description: {asset.Description}");
+            EditorGUILayout.LabelField($"Snapshot Time: {asset.SnapshotTime}");
 
             m_isBlendShapeListOpen = DrawFoldoutSection("BlendShapeKey List", m_isBlendShapeListOpen, () =>
             {
-                foreach (var blendShapeKeyData in info.BlendShapeKeyDataList)
+                foreach (var blendShapeKeyData in asset.BlendShapeKeyDataList)
                 {
                     EditorGUILayout.BeginHorizontal();
                     EditorGUILayout.TextField(blendShapeKeyData.blendShapeKey, GUILayout.ExpandWidth(true));

@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace SnowyWalk.BlendShapeSnapshot.Editor
 {
-    public interface IEditorWindowProvider
+    internal interface IEditorWindowModule
     {
         public void OnEnable();
         public void OnDisable();
@@ -11,12 +11,12 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
 
     public class BlendShapeSnapshotEditor : EditorWindow
     {
-        private PreviewProvider m_previewProvider = new PreviewProvider();
-        private SnapshotProvider m_snapshotProvider = new SnapshotProvider();
+        private SnapshotPreviewRenderer m_snapshotPreviewRenderer = new SnapshotPreviewRenderer();
+        private SnapshotRepository m_snapshotRepository = new SnapshotRepository();
         
         private SkinnedMeshRenderer m_targetMeshRenderer;
 
-        private IEditorWindowProvider[] m_providers;
+        private IEditorWindowModule[] m_providers;
 
         [MenuItem("Tools/Blend Shape Snapshot Manager")]
         public static void ShowWindow()
@@ -28,9 +28,9 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
 
         private void OnEnable()
         {
-            m_providers = new IEditorWindowProvider[] { m_previewProvider, m_snapshotProvider };
+            m_providers = new IEditorWindowModule[] { m_snapshotPreviewRenderer, m_snapshotRepository };
 
-            foreach (IEditorWindowProvider provider in m_providers)
+            foreach (IEditorWindowModule provider in m_providers)
             {
                 provider.OnEnable();
             }
@@ -38,7 +38,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
 
         private void OnDisable()
         {
-            foreach (IEditorWindowProvider provider in m_providers)
+            foreach (IEditorWindowModule provider in m_providers)
             {
                 provider.OnDisable();
             }
