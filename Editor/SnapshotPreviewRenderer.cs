@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
@@ -8,63 +9,135 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
     {
         private PreviewRenderUtility m_previewRenderUtility;
 
-        public void Init(GameObject targetGameObject, BlendShapeSnapshotAsset blendShapeSnapshotAsset)
+        public void Init(SkinnedMeshRenderer targetSkinnedMeshRenderer, BlendShapeSnapshotAsset blendShapeSnapshotAsset = null)
         {
-            m_previewRenderUtility.Cleanup();
-            m_previewRenderUtility.AddSingleGO(GetRootGameObject(targetGameObject.transform));
+            m_previewRenderUtility?.Cleanup();
+            m_previewRenderUtility = new PreviewRenderUtility();
+
+            GameObject sourceRootGameObject  = GetRootGameObject(targetSkinnedMeshRenderer.transform);
+            GameObject previewRootGameObject = UnityEngine.Object.Instantiate(sourceRootGameObject);
+            previewRootGameObject.hideFlags = HideFlags.HideAndDontSave;
             
+            targetSkinnedMeshRenderer = FindMatchingRendererInClone(sourceRootGameObject, targetSkinnedMeshRenderer, previewRootGameObject);
+            if (blendShapeSnapshotAsset != null)
+                blendShapeSnapshotAsset.Apply(targetSkinnedMeshRenderer);
+            m_previewRenderUtility.AddSingleGO(previewRootGameObject);
+
             UpdateCamera();
+        }
+
+        public void Render(Rect rt)
+        {
+            if (m_previewRenderUtility == null)
+                return;
+
+            try
+            {
+                m_previewRenderUtility.BeginPreview(rt, GUIStyle.none);
+                RenderTexture previewCamRenderTexture = m_previewRenderUtility.camera.targetTexture;
+                if (previewCamRenderTexture?.antiAliasing == 0)
+                {
+                    previewCamRenderTexture.Release();
+                    previewCamRenderTexture.antiAliasing = Mathf.Max(1, QualitySettings.antiAliasing);
+                    previewCamRenderTexture.Create();
+                }
+
+                m_previewRenderUtility.Render();
+            }
+            finally
+            {
+                m_previewRenderUtility.EndAndDrawPreview(rt);
+            }
         }
 
         void IEditorWindowModule.OnEnable()
         {
-            m_previewRenderUtility = new PreviewRenderUtility();
             SceneView.duringSceneGui += OnSceneViewUpdate;
         }
 
         void IEditorWindowModule.OnDisable()
         {
-            m_previewRenderUtility.Cleanup();
-            
             SceneView.duringSceneGui -= OnSceneViewUpdate;
+
+            m_previewRenderUtility?.Cleanup();
             m_previewRenderUtility = null;
         }
 
         private void OnSceneViewUpdate(SceneView _)
         {
-            UpdateCamera();
+            if (m_previewRenderUtility != null)
+                UpdateCamera();
         }
 
         private void UpdateCamera()
         {
-            Camera cam = SceneView.currentDrawingSceneView.camera;
+            if (SceneView.lastActiveSceneView?.camera == null)
+                return;
+
+            Camera cam = SceneView.lastActiveSceneView.camera;
             Transform cameraTransform = cam.transform;
+            Camera previewCamera = m_previewRenderUtility.camera;
             
-            m_previewRenderUtility.camera.transform.position = cameraTransform.position;
-            m_previewRenderUtility.camera.transform.rotation = cameraTransform.rotation;
-            m_previewRenderUtility.camera.fieldOfView = cam.fieldOfView;
-            m_previewRenderUtility.camera.nearClipPlane = cam.nearClipPlane;
-            m_previewRenderUtility.camera.farClipPlane = cam.farClipPlane;
-            m_previewRenderUtility.camera.orthographic = cam.orthographic;
-            m_previewRenderUtility.camera.orthographicSize = cam.orthographicSize;
-            m_previewRenderUtility.camera.aspect = cam.aspect;
-            // m_previewRenderUtility.camera.projectionMatrix = cam.projectionMatrix;
-            // m_previewRenderUtility.camera.cullingMask = cam.cullingMask;
-            // m_previewRenderUtility.camera.backgroundColor = cam.backgroundColor;
-            // m_previewRenderUtility.camera.clearFlags = cam.clearFlags;
-            // m_previewRenderUtility.camera.depth = cam.depth;
-            // m_previewRenderUtility.camera.rect = cam.rect;
-            // m_previewRenderUtility.camera.targetTexture = cam.targetTexture;
-            // m_previewRenderUtility.camera.enabled = cam.enabled;
+            bool changed =
+                previewCamera.transform.position != cameraTransform.position ||
+                previewCamera.transform.rotation != cameraTransform.rotation ||
+                !Mathf.Approximately(previewCamera.fieldOfView, cam.fieldOfView) ||
+                !Mathf.Approximately(previewCamera.nearClipPlane, cam.nearClipPlane) ||
+                !Mathf.Approximately(previewCamera.farClipPlane, cam.farClipPlane) ||
+                previewCamera.orthographic != cam.orthographic ||
+                !Mathf.Approximately(previewCamera.orthographicSize, cam.orthographicSize);
+            
+
+            previewCamera.transform.position = cameraTransform.position;
+            previewCamera.transform.rotation = cameraTransform.rotation;
+            previewCamera.fieldOfView = cam.fieldOfView;
+            previewCamera.nearClipPlane = cam.nearClipPlane;
+            previewCamera.farClipPlane = cam.farClipPlane;
+            previewCamera.orthographic = cam.orthographic;
+            previewCamera.orthographicSize = cam.orthographicSize;
         }
-        
+
         private GameObject GetRootGameObject(Transform targetTransform)
         {
             while (targetTransform.parent != null)
                 targetTransform = targetTransform.parent;
             return targetTransform.gameObject;
         }
+
+        private SkinnedMeshRenderer FindMatchingRendererInClone(
+            GameObject sourceRoot,
+            SkinnedMeshRenderer sourceRenderer,
+            GameObject cloneRoot)
+        {
+            var path = GetSiblingIndexPath(sourceRoot.transform, sourceRenderer.transform);
+
+            Transform current = cloneRoot.transform;
+            foreach (int siblingIndex in path)
+            {
+                if (siblingIndex < 0 || siblingIndex >= current.childCount)
+                    return null;
+
+                current = current.GetChild(siblingIndex);
+            }
+
+            return current.GetComponent<SkinnedMeshRenderer>();
+
+            List<int> GetSiblingIndexPath(Transform root, Transform target)
+            {
+                var path = new List<int>();
+
+                Transform current = target;
+                while (current != null && current != root)
+                {
+                    path.Add(current.GetSiblingIndex());
+                    current = current.parent;
+                }
+
+                path.Reverse();
+                return path;
+            }
+        }
     }
 
-    
+
 }

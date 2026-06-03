@@ -11,17 +11,22 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
 
     public class BlendShapeSnapshotEditor : EditorWindow
     {
-        private SnapshotPreviewRenderer m_snapshotPreviewRenderer = new SnapshotPreviewRenderer();
-        private SnapshotRepository m_snapshotRepository = new SnapshotRepository();
-        
+        private readonly SnapshotPreviewRenderer m_snapshotPreviewRenderer = new SnapshotPreviewRenderer();
+        private readonly SnapshotRepository m_snapshotRepository = new SnapshotRepository();
+
         private SkinnedMeshRenderer m_targetMeshRenderer;
 
         private IEditorWindowModule[] m_providers;
+        
+        // For Window
+        private SkinnedMeshRenderer m_lastTargetMeshRenderer;
+        
+        private bool m_isPreviewing => m_targetMeshRenderer != null;
 
         [MenuItem("Tools/Blend Shape Snapshot Manager")]
         public static void ShowWindow()
         {
-            BlendShapeSnapshotEditor window = GetWindow<BlendShapeSnapshotEditor>("Blend Shape Snapshot Manager");
+            var window = GetWindow<BlendShapeSnapshotEditor>("Blend Shape Snapshot Manager");
             window.minSize = new Vector2(420f, 320f);
             window.Show();
         }
@@ -51,9 +56,37 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
                 EditorGUIUtility.labelWidth = EditorStyles.label.CalcSize(new GUIContent(label)).x + 8f;
                 m_targetMeshRenderer = EditorGUILayout.ObjectField(label, m_targetMeshRenderer, typeof(SkinnedMeshRenderer), true, GUILayout.ExpandWidth(true)) as SkinnedMeshRenderer;
                 EditorGUIUtility.labelWidth = 0f;
+
+                if (m_lastTargetMeshRenderer != m_targetMeshRenderer)
+                {
+                    if (m_targetMeshRenderer)
+                        OnAllocateSkinnedMeshRenderer();
+                    else
+                        OnReleaseSkinnedMeshRenderer();
+                    m_lastTargetMeshRenderer = m_targetMeshRenderer;
+                }
             }
-            
-            
+
+            if (m_isPreviewing)
+            {
+                Rect previewRect = GUILayoutUtility.GetAspectRect(1f, GUILayout.ExpandWidth(true));
+
+                if (Event.current.type == EventType.Repaint)
+                    m_snapshotPreviewRenderer.Render(previewRect);
+            }
+        }
+
+        private void OnAllocateSkinnedMeshRenderer()
+        {
+            // TODO: Repository Load / Select First One
+            Debug.Log("[OnAllocateSkinnedMeshRenderer]");
+            m_snapshotPreviewRenderer.Init(m_targetMeshRenderer);
+        }
+        
+        private void OnReleaseSkinnedMeshRenderer()
+        {
+            // TODO: Repository Unload / Preview Release
+            Debug.Log("[OnReleaseSkinnedMeshRenderer]");
         }
     }
 }

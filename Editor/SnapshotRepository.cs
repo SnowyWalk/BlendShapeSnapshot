@@ -9,10 +9,12 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
 
         void IEditorWindowModule.OnEnable()
         {
+            // TODO:
         }
 
         void IEditorWindowModule.OnDisable()
         {
+            // TODO:
         }
 
         public void Save(GameObject targetGameObject)
@@ -20,19 +22,14 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             var smr = targetGameObject.GetComponent<SkinnedMeshRenderer>();
 
             BlendShapeSnapshotAsset blendShapeSnapshotAsset = ScriptableObject.CreateInstance<BlendShapeSnapshotAsset>();
-            int blendShapeCount = smr.sharedMesh.blendShapeCount;
-            for (int i = 0; i < blendShapeCount; i++)
-            {
-                string name = smr.sharedMesh.GetBlendShapeName(i);
-                float value = smr.GetBlendShapeWeight(i);
-                blendShapeSnapshotAsset.AddBlendShapeKey(name, value);
-            }
+            blendShapeSnapshotAsset.Capture(smr);
             
-            // targetGameObject.get
+            // TODO:
         }
 
         private void Save()
         {
+            // TODO:
             var asset = ScriptableObject.CreateInstance<BlendShapeSnapshotAsset>();
 
             AssetDatabase.CreateAsset(asset, Path.Combine(m_path, "BlendShapeSnapshot.asset"));
