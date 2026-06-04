@@ -1,3 +1,4 @@
+using System;
 using UnityEditor;
 using UnityEngine;
 
@@ -31,6 +32,11 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             window.Show();
         }
 
+        private void Awake()
+        {
+            m_snapshotPreviewRenderer.SetRepaintFunc(Repaint);
+        }
+
         private void OnEnable()
         {
             m_providers = new IEditorWindowModule[] { m_snapshotPreviewRenderer, m_snapshotRepository };
@@ -51,6 +57,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
 
         private void OnGUI()
         {
+            // SMR 넣는 칸
             {
                 const string label = "대상 Mesh";
                 EditorGUIUtility.labelWidth = EditorStyles.label.CalcSize(new GUIContent(label)).x + 8f;
@@ -67,6 +74,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
                 }
             }
 
+            // 프리뷰 영역
             if (m_isPreviewing)
             {
                 Rect previewRect = GUILayoutUtility.GetAspectRect(1f, GUILayout.ExpandWidth(true));
@@ -75,7 +83,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
                     m_snapshotPreviewRenderer.Render(previewRect);
             }
         }
-
+        
         private void OnAllocateSkinnedMeshRenderer()
         {
             // TODO: Repository Load / Select First One

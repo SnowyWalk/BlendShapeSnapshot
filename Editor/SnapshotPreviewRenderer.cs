@@ -8,16 +8,22 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
     public class SnapshotPreviewRenderer : IEditorWindowModule
     {
         private PreviewRenderUtility m_previewRenderUtility;
+        private Action m_repaintFunc;
+        
+        public void SetRepaintFunc(Action repaintFunc)
+        {
+            m_repaintFunc = repaintFunc;
+        }
 
         public void Init(SkinnedMeshRenderer targetSkinnedMeshRenderer, BlendShapeSnapshotDatabase blendShapeSnapshotDatabase = null)
         {
             m_previewRenderUtility?.Cleanup();
             m_previewRenderUtility = new PreviewRenderUtility();
 
-            GameObject sourceRootGameObject  = GetRootGameObject(targetSkinnedMeshRenderer.transform);
+            GameObject sourceRootGameObject = GetRootGameObject(targetSkinnedMeshRenderer.transform);
             GameObject previewRootGameObject = UnityEngine.Object.Instantiate(sourceRootGameObject);
             previewRootGameObject.hideFlags = HideFlags.HideAndDontSave;
-            
+
             targetSkinnedMeshRenderer = FindMatchingRendererInClone(sourceRootGameObject, targetSkinnedMeshRenderer, previewRootGameObject);
             if (blendShapeSnapshotDatabase != null)
                 blendShapeSnapshotDatabase.Apply(targetSkinnedMeshRenderer);
@@ -78,7 +84,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             Transform cameraTransform = cam.transform;
             Camera previewCamera = m_previewRenderUtility.camera;
             
-            bool changed =
+            bool isDirty =
                 previewCamera.transform.position != cameraTransform.position ||
                 previewCamera.transform.rotation != cameraTransform.rotation ||
                 !Mathf.Approximately(previewCamera.fieldOfView, cam.fieldOfView) ||
@@ -86,15 +92,18 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
                 !Mathf.Approximately(previewCamera.farClipPlane, cam.farClipPlane) ||
                 previewCamera.orthographic != cam.orthographic ||
                 !Mathf.Approximately(previewCamera.orthographicSize, cam.orthographicSize);
-            
 
-            previewCamera.transform.position = cameraTransform.position;
-            previewCamera.transform.rotation = cameraTransform.rotation;
+            if (!isDirty)
+                return;
+            
+            previewCamera.transform.SetPositionAndRotation(cameraTransform.position, cameraTransform.rotation);
             previewCamera.fieldOfView = cam.fieldOfView;
             previewCamera.nearClipPlane = cam.nearClipPlane;
             previewCamera.farClipPlane = cam.farClipPlane;
             previewCamera.orthographic = cam.orthographic;
             previewCamera.orthographicSize = cam.orthographicSize;
+            
+            m_repaintFunc?.Invoke();
         }
 
         private GameObject GetRootGameObject(Transform targetTransform)

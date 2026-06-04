@@ -19,9 +19,12 @@ namespace SnowyWalk.BlendShapeSnapshot
             }
         }
         
-        private List<BlendShapeKeyEntry> m_blendShapeKeyDataList = new List<BlendShapeKeyEntry>();
+        private readonly List<BlendShapeKeyEntry> m_blendShapeKeyEntryList = new List<BlendShapeKeyEntry>();
         private DateTime m_snapshotTime;
         private string m_description;
+        
+        public string SnapshotTime => m_snapshotTime.ToString("yyyy-MM-dd HH:mm:ss");
+        public string Description => m_description;
 
         public void Capture(SkinnedMeshRenderer smr) 
         {
@@ -30,7 +33,7 @@ namespace SnowyWalk.BlendShapeSnapshot
             {
                 string name = smr.sharedMesh.GetBlendShapeName(i);
                 float value = smr.GetBlendShapeWeight(i);
-                AddBlendShapeKey(name, value);
+                m_blendShapeKeyEntryList.Add(new BlendShapeKeyEntry(name, value));
             }
         }
 
@@ -42,15 +45,7 @@ namespace SnowyWalk.BlendShapeSnapshot
                 smr.SetBlendShapeWeight(smr.sharedMesh.GetBlendShapeIndex(blendShapeKey), value);
             }
         }
-
-        public string SnapshotTime => m_snapshotTime.ToString("yyyy-MM-dd HH:mm:ss");
-        public string Description => m_description;
         
-        public void AddBlendShapeKey(string blendShapeKey, float value)
-        {
-            m_blendShapeKeyDataList.Add(new BlendShapeKeyEntry(blendShapeKey, value));
-        }
-        
-        public IEnumerable<(string blendShapeKey, float value)> BlendShapeKeyDataList => m_blendShapeKeyDataList.Select(e => (e.BlendShapeKey, e.Value));
+        public IEnumerable<(string blendShapeKey, float value)> BlendShapeKeyDataList => m_blendShapeKeyEntryList.Select(e => (e.BlendShapeKey, e.Value));
     }
 }
