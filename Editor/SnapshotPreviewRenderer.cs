@@ -9,7 +9,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
     {
         private PreviewRenderUtility m_previewRenderUtility;
 
-        public void Init(SkinnedMeshRenderer targetSkinnedMeshRenderer, BlendShapeSnapshotAsset blendShapeSnapshotAsset = null)
+        public void Init(SkinnedMeshRenderer targetSkinnedMeshRenderer, BlendShapeSnapshotDatabase blendShapeSnapshotDatabase = null)
         {
             m_previewRenderUtility?.Cleanup();
             m_previewRenderUtility = new PreviewRenderUtility();
@@ -19,8 +19,8 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             previewRootGameObject.hideFlags = HideFlags.HideAndDontSave;
             
             targetSkinnedMeshRenderer = FindMatchingRendererInClone(sourceRootGameObject, targetSkinnedMeshRenderer, previewRootGameObject);
-            if (blendShapeSnapshotAsset != null)
-                blendShapeSnapshotAsset.Apply(targetSkinnedMeshRenderer);
+            if (blendShapeSnapshotDatabase != null)
+                blendShapeSnapshotDatabase.Apply(targetSkinnedMeshRenderer);
             m_previewRenderUtility.AddSingleGO(previewRootGameObject);
 
             UpdateCamera();

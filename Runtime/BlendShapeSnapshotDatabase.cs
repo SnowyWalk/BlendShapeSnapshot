@@ -4,7 +4,7 @@ using System.Linq;
 using UnityEngine;
 namespace SnowyWalk.BlendShapeSnapshot
 {
-    public class BlendShapeSnapshotAsset : ScriptableObject
+    public class BlendShapeSnapshotDatabase : ScriptableObject
     {
         [Serializable]
         private class BlendShapeKeyEntry
