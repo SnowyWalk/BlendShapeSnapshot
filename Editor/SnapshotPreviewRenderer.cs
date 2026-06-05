@@ -7,17 +7,20 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
 {
     public class SnapshotPreviewRenderer : IEditorWindowModule
     {
-        private PreviewRenderUtility m_previewRenderUtility;
-        private Action m_repaintFunc;
+        private IEditorWindowOrchestrator m_orchestrator;
         
-        public void SetRepaintFunc(Action repaintFunc)
-        {
-            m_repaintFunc = repaintFunc;
-        }
-
-        public void Init(SkinnedMeshRenderer targetSkinnedMeshRenderer, BlendShapeSnapshotDatabase blendShapeSnapshotDatabase = null)
+        private PreviewRenderUtility m_previewRenderUtility;
+        
+        private bool HasPreviewTarget => m_previewRenderUtility != null;
+        
+        public void CreatePreviewTarget(SkinnedMeshRenderer targetSkinnedMeshRenderer, BlendShapeSnapshotDatabase.BlendShapeSnapshot blendShapeSnapshot = null)
         {
             m_previewRenderUtility?.Cleanup();
+            m_previewRenderUtility = null;
+            
+            if (targetSkinnedMeshRenderer == null)
+                return;
+
             m_previewRenderUtility = new PreviewRenderUtility();
 
             GameObject sourceRootGameObject = GetRootGameObject(targetSkinnedMeshRenderer.transform);
@@ -25,8 +28,8 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             previewRootGameObject.hideFlags = HideFlags.HideAndDontSave;
 
             targetSkinnedMeshRenderer = FindMatchingRendererInClone(sourceRootGameObject, targetSkinnedMeshRenderer, previewRootGameObject);
-            if (blendShapeSnapshotDatabase != null)
-                blendShapeSnapshotDatabase.Apply(targetSkinnedMeshRenderer);
+            if (blendShapeSnapshot != null)
+                blendShapeSnapshot.ApplySnapshot(targetSkinnedMeshRenderer);
             m_previewRenderUtility.AddSingleGO(previewRootGameObject);
 
             UpdateCamera();
@@ -34,7 +37,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
 
         public void Render(Rect rt)
         {
-            if (m_previewRenderUtility == null)
+            if (!HasPreviewTarget)
                 return;
 
             try
@@ -56,6 +59,11 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             }
         }
 
+        void IEditorWindowModule.Initialize(IEditorWindowOrchestrator orchestrator)
+        {
+            m_orchestrator = orchestrator;
+        }
+        
         void IEditorWindowModule.OnEnable()
         {
             SceneView.duringSceneGui += OnSceneViewUpdate;
@@ -71,7 +79,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
 
         private void OnSceneViewUpdate(SceneView _)
         {
-            if (m_previewRenderUtility != null)
+            if (HasPreviewTarget)
                 UpdateCamera();
         }
 
@@ -103,7 +111,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             previewCamera.orthographic = cam.orthographic;
             previewCamera.orthographicSize = cam.orthographicSize;
             
-            m_repaintFunc?.Invoke();
+            m_orchestrator.Render();
         }
 
         private GameObject GetRootGameObject(Transform targetTransform)

@@ -7,6 +7,8 @@ namespace SnowyWalk.BlendShapeSnapshot
 {
     public class BlendShapeSnapshotTarget : MonoBehaviour
     {
-        public Guid Guid;
+        [SerializeField] private string m_guid;
+        
+        public string Guid => m_guid;
     }
 }

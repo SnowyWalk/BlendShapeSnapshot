@@ -5,8 +5,16 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
 {
     public class SnapshotRepository : IEditorWindowModule
     {
-        private const string m_path = "Assets/BlendShapeSnapshots";
+        private const string m_basePath = "Assets/BlendShapeSnapshots";
+        
+        private IEditorWindowOrchestrator m_orchestrator;
+        
 
+        void IEditorWindowModule.Initialize(IEditorWindowOrchestrator orchestrator)
+        {
+            m_orchestrator = orchestrator;
+        }
+        
         void IEditorWindowModule.OnEnable()
         {
             // TODO:
@@ -17,22 +25,22 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             // TODO:
         }
 
-        public void Save(GameObject targetGameObject)
+        public void Save(SkinnedMeshRenderer smr)
         {
-            var smr = targetGameObject.GetComponent<SkinnedMeshRenderer>();
-
-            BlendShapeSnapshotDatabase blendShapeSnapshotDatabase = ScriptableObject.CreateInstance<BlendShapeSnapshotDatabase>();
-            blendShapeSnapshotDatabase.Capture(smr);
+            // TODO: Save
+            // var smr = targetGameObject.GetComponent<SkinnedMeshRenderer>();
+            //
+            // BlendShapeSnapshotDatabase blendShapeSnapshotDatabase = ScriptableObject.CreateInstance<BlendShapeSnapshotDatabase>();
+            // blendShapeSnapshotDatabase.CaptureBlendShapeKeys(smr);
             
-            // TODO:
         }
 
-        private void Save()
+        private void SaveTest()
         {
             // TODO:
             var asset = ScriptableObject.CreateInstance<BlendShapeSnapshotDatabase>();
 
-            AssetDatabase.CreateAsset(asset, Path.Combine(m_path, "BlendShapeSnapshot.asset"));
+            AssetDatabase.CreateAsset(asset, Path.Combine(m_basePath, "BlendShapeSnapshot.asset"));
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 

@@ -6,25 +6,32 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
 {
     internal interface IEditorWindowModule
     {
+        public void Initialize(IEditorWindowOrchestrator orchestrator);
         public void OnEnable();
         public void OnDisable();
     }
 
-    public class BlendShapeSnapshotEditor : EditorWindow
+    internal interface IEditorWindowOrchestrator
+    {
+        public void Render();
+    }
+
+    public class BlendShapeSnapshotEditor : EditorWindow, IEditorWindowOrchestrator
     {
         private readonly SnapshotPreviewRenderer m_snapshotPreviewRenderer = new SnapshotPreviewRenderer();
         private readonly SnapshotRepository m_snapshotRepository = new SnapshotRepository();
 
         private SkinnedMeshRenderer m_targetMeshRenderer;
 
-        private IEditorWindowModule[] m_providers;
+        private IEditorWindowModule[] m_modules;
         
         // For Window
         private SkinnedMeshRenderer m_lastTargetMeshRenderer;
         
-        private bool m_isPreviewing => m_targetMeshRenderer != null;
+        // Properties
+        private bool IsPreviewing => m_targetMeshRenderer != null;
 
-        [MenuItem("Tools/Blend Shape Snapshot Manager")]
+        [MenuItem("Tools/BlendShape Snapshot Manager")]
         public static void ShowWindow()
         {
             var window = GetWindow<BlendShapeSnapshotEditor>("Blend Shape Snapshot Manager");
@@ -32,24 +39,19 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             window.Show();
         }
 
-        private void Awake()
-        {
-            m_snapshotPreviewRenderer.SetRepaintFunc(Repaint);
-        }
-
         private void OnEnable()
         {
-            m_providers = new IEditorWindowModule[] { m_snapshotPreviewRenderer, m_snapshotRepository };
-
-            foreach (IEditorWindowModule provider in m_providers)
+            m_modules = new IEditorWindowModule[] { m_snapshotPreviewRenderer, m_snapshotRepository };
+            foreach (IEditorWindowModule provider in m_modules)
             {
+                provider.Initialize(this);
                 provider.OnEnable();
             }
         }
 
         private void OnDisable()
         {
-            foreach (IEditorWindowModule provider in m_providers)
+            foreach (IEditorWindowModule provider in m_modules)
             {
                 provider.OnDisable();
             }
@@ -66,35 +68,31 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
 
                 if (m_lastTargetMeshRenderer != m_targetMeshRenderer)
                 {
-                    if (m_targetMeshRenderer)
-                        OnAllocateSkinnedMeshRenderer();
-                    else
-                        OnReleaseSkinnedMeshRenderer();
+                    HandleTargetChanged();
                     m_lastTargetMeshRenderer = m_targetMeshRenderer;
                 }
             }
 
             // 프리뷰 영역
-            if (m_isPreviewing)
+            if (IsPreviewing)
             {
                 Rect previewRect = GUILayoutUtility.GetAspectRect(1f, GUILayout.ExpandWidth(true));
 
                 if (Event.current.type == EventType.Repaint)
                     m_snapshotPreviewRenderer.Render(previewRect);
             }
+            
+            // TODO: 나머지 기능들 작성
         }
         
-        private void OnAllocateSkinnedMeshRenderer()
+        private void HandleTargetChanged()
         {
-            // TODO: Repository Load / Select First One
-            Debug.Log("[OnAllocateSkinnedMeshRenderer]");
-            m_snapshotPreviewRenderer.Init(m_targetMeshRenderer);
+            m_snapshotPreviewRenderer.CreatePreviewTarget(m_targetMeshRenderer);
         }
-        
-        private void OnReleaseSkinnedMeshRenderer()
+
+        void IEditorWindowOrchestrator.Render()
         {
-            // TODO: Repository Unload / Preview Release
-            Debug.Log("[OnReleaseSkinnedMeshRenderer]");
+            Repaint();
         }
     }
 }
