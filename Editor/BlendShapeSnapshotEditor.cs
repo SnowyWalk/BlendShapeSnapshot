@@ -55,6 +55,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             {
                 provider.OnDisable();
             }
+            m_lastTargetMeshRenderer = null;
         }
 
         private void OnGUI()
@@ -76,7 +77,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             // 프리뷰 영역
             if (IsPreviewing)
             {
-                Rect previewRect = GUILayoutUtility.GetAspectRect(1f, GUILayout.ExpandWidth(true));
+                Rect previewRect = GUILayoutUtility.GetAspectRect(16f / 9f, GUILayout.ExpandWidth(true));
 
                 if (Event.current.type == EventType.Repaint)
                     m_snapshotPreviewRenderer.Render(previewRect);

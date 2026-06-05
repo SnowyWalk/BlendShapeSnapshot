@@ -2,29 +2,30 @@ using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace SnowyWalk.BlendShapeSnapshot.Editor
 {
     public class SnapshotPreviewRenderer : IEditorWindowModule
     {
         private IEditorWindowOrchestrator m_orchestrator;
-        
+
         private PreviewRenderUtility m_previewRenderUtility;
-        
+
         private bool HasPreviewTarget => m_previewRenderUtility != null;
-        
+
         public void CreatePreviewTarget(SkinnedMeshRenderer targetSkinnedMeshRenderer, BlendShapeSnapshotDatabase.BlendShapeSnapshot blendShapeSnapshot = null)
         {
             m_previewRenderUtility?.Cleanup();
             m_previewRenderUtility = null;
-            
+
             if (targetSkinnedMeshRenderer == null)
                 return;
 
             m_previewRenderUtility = new PreviewRenderUtility();
 
             GameObject sourceRootGameObject = GetRootGameObject(targetSkinnedMeshRenderer.transform);
-            GameObject previewRootGameObject = UnityEngine.Object.Instantiate(sourceRootGameObject);
+            GameObject previewRootGameObject = Object.Instantiate(sourceRootGameObject);
             previewRootGameObject.hideFlags = HideFlags.HideAndDontSave;
 
             targetSkinnedMeshRenderer = FindMatchingRendererInClone(sourceRootGameObject, targetSkinnedMeshRenderer, previewRootGameObject);
@@ -33,6 +34,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             m_previewRenderUtility.AddSingleGO(previewRootGameObject);
 
             UpdateCamera();
+            SyncPreviewLightFromScene();
         }
 
         public void Render(Rect rt)
@@ -43,6 +45,8 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             try
             {
                 m_previewRenderUtility.BeginPreview(rt, GUIStyle.none);
+
+                // 안티앨리어싱 적용
                 RenderTexture previewCamRenderTexture = m_previewRenderUtility.camera.targetTexture;
                 if (previewCamRenderTexture?.antiAliasing == 0)
                 {
@@ -63,7 +67,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
         {
             m_orchestrator = orchestrator;
         }
-        
+
         void IEditorWindowModule.OnEnable()
         {
             SceneView.duringSceneGui += OnSceneViewUpdate;
@@ -91,7 +95,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             Camera cam = SceneView.lastActiveSceneView.camera;
             Transform cameraTransform = cam.transform;
             Camera previewCamera = m_previewRenderUtility.camera;
-            
+
             bool isDirty =
                 previewCamera.transform.position != cameraTransform.position ||
                 previewCamera.transform.rotation != cameraTransform.rotation ||
@@ -103,15 +107,62 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
 
             if (!isDirty)
                 return;
-            
+
             previewCamera.transform.SetPositionAndRotation(cameraTransform.position, cameraTransform.rotation);
             previewCamera.fieldOfView = cam.fieldOfView;
             previewCamera.nearClipPlane = cam.nearClipPlane;
             previewCamera.farClipPlane = cam.farClipPlane;
             previewCamera.orthographic = cam.orthographic;
             previewCamera.orthographicSize = cam.orthographicSize;
-            
+
             m_orchestrator.Render();
+        }
+
+        private void SyncPreviewLightFromScene()
+        {
+            if (!HasPreviewTarget)
+                return;
+
+            Light sourceLight = FindMainSceneLight();
+            Light previewLight = m_previewRenderUtility.lights[0];
+
+            if (sourceLight == null)
+            {
+                previewLight.enabled = false;
+                if (m_previewRenderUtility.lights.Length > 1)
+                    m_previewRenderUtility.lights[1].enabled = false;
+                return;
+            }
+
+            previewLight.enabled = true;
+            previewLight.type = sourceLight.type;
+            previewLight.color = sourceLight.color;
+            previewLight.intensity = sourceLight.intensity;
+            previewLight.transform.SetPositionAndRotation(
+                sourceLight.transform.position,
+                sourceLight.transform.rotation);
+
+            if (m_previewRenderUtility.lights.Length > 1)
+                m_previewRenderUtility.lights[1].enabled = false;
+
+            Unsupported.SetRenderSettingsUseFogNoDirty(false);
+            m_previewRenderUtility.ambientColor = RenderSettings.ambientLight;
+        }
+
+        private static Light FindMainSceneLight()
+        {
+            Light[] lights = Object.FindObjectsByType<Light>(FindObjectsSortMode.None);
+
+            foreach (Light light in lights)
+            {
+                if (!light.enabled || !light.gameObject.activeInHierarchy)
+                    continue;
+
+                if (light.type == LightType.Directional)
+                    return light;
+            }
+
+            return null;
         }
 
         private GameObject GetRootGameObject(Transform targetTransform)
