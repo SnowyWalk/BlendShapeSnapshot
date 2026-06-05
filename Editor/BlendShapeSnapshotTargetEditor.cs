@@ -1,16 +1,32 @@
 using UnityEditor;
-using UnityEngine;
 
 namespace SnowyWalk.BlendShapeSnapshot.Editor
 {
     [CustomEditor(typeof(BlendShapeSnapshotTarget))]
     public class BlendShapeSnapshotTargetEditor : UnityEditor.Editor
     {
+        private UnityEngine.Object m_target;
         private BlendShapeSnapshotDatabase m_cachedDatabase;
         private bool m_isCacheFailed;
 
+        private void OnEnable()
+        {
+            BlendShapeSnapshotAssetWatcher.OnInvalidate += InvalidateCache;
+        }
+
+        private void OnDisable()
+        {
+            BlendShapeSnapshotAssetWatcher.OnInvalidate -= InvalidateCache;
+        }
+
         public override void OnInspectorGUI()
         {
+            if (m_target != target)
+            {
+                InvalidateCache();
+                m_target = (BlendShapeSnapshotTarget)target;
+            }
+            
             BlendShapeSnapshotTarget component = (BlendShapeSnapshotTarget)target;
 
             EditorGUILayout.LabelField($"Guid: {component.Guid}", EditorStyles.boldLabel);
@@ -25,15 +41,15 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
                 
                 if (m_isCacheFailed)
                 {
-                    EditorGUILayout.HelpBox("Cache Failed", MessageType.Error);
-                    if (GUILayout.Button("Refresh"))
-                    {
-                        m_isCacheFailed = false;
-                        Repaint();
-                    }
+                    EditorGUILayout.HelpBox("대응되는 저장소를 찾지 못했음", MessageType.Error);
                 }
             }
+        }
 
+        private void InvalidateCache()
+        {
+            m_cachedDatabase = null;
+            m_isCacheFailed = false;
         }
 
         private bool CacheDatabase(string guid)
@@ -52,6 +68,4 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             return false;
         }
     }
-
-
 }
