@@ -35,7 +35,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             
         }
 
-        [MenuItem("Tools/BlendShape Snapshot Manager/Save Test")]
+        [MenuItem("Tools/BlendShape Snapshot Manager Test/Save Test")]
         private static void SaveTest()
         {
             var asset = ScriptableObject.CreateInstance<BlendShapeSnapshotDatabase>();

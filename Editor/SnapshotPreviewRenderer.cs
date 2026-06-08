@@ -83,37 +83,54 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
 
         private void OnSceneViewUpdate(SceneView _)
         {
-            if (HasPreviewTarget)
+            if (!HasPreviewTarget)
+                return;
+
+            if (IsSceneViewChanged())
                 UpdateCamera();
+        }
+
+        private bool IsSceneViewChanged()
+        {
+            Camera sourceCamera = SceneView.lastActiveSceneView?.camera;
+            if (sourceCamera == null)
+                return false;
+
+            Camera previewCamera = m_previewRenderUtility.camera;
+
+            sourceCamera.transform.GetPositionAndRotation(out Vector3 camPos, out Quaternion camAngle);
+            previewCamera.transform.GetPositionAndRotation(out Vector3 previewCamPos, out Quaternion previewCamAngle);
+            
+            // Check TR
+            if (camPos != previewCamPos || camAngle != previewCamAngle)
+                return true;
+            
+            // Check FOV, Near, Far, Ortho
+            if (!Mathf.Approximately(previewCamera.fieldOfView, sourceCamera.fieldOfView) ||
+                !Mathf.Approximately(previewCamera.nearClipPlane, sourceCamera.nearClipPlane) ||
+                !Mathf.Approximately(previewCamera.farClipPlane, sourceCamera.farClipPlane) ||
+                previewCamera.orthographic != sourceCamera.orthographic ||
+                !Mathf.Approximately(previewCamera.orthographicSize, sourceCamera.orthographicSize))
+                return true;
+            
+            return false;
         }
 
         private void UpdateCamera()
         {
-            if (SceneView.lastActiveSceneView?.camera == null)
+            Camera sourceCamera = SceneView.lastActiveSceneView?.camera;
+            if (sourceCamera == null)
                 return;
 
-            Camera cam = SceneView.lastActiveSceneView.camera;
-            Transform cameraTransform = cam.transform;
             Camera previewCamera = m_previewRenderUtility.camera;
 
-            bool isDirty =
-                previewCamera.transform.position != cameraTransform.position ||
-                previewCamera.transform.rotation != cameraTransform.rotation ||
-                !Mathf.Approximately(previewCamera.fieldOfView, cam.fieldOfView) ||
-                !Mathf.Approximately(previewCamera.nearClipPlane, cam.nearClipPlane) ||
-                !Mathf.Approximately(previewCamera.farClipPlane, cam.farClipPlane) ||
-                previewCamera.orthographic != cam.orthographic ||
-                !Mathf.Approximately(previewCamera.orthographicSize, cam.orthographicSize);
-
-            if (!isDirty)
-                return;
-
+            Transform cameraTransform = sourceCamera.transform;
             previewCamera.transform.SetPositionAndRotation(cameraTransform.position, cameraTransform.rotation);
-            previewCamera.fieldOfView = cam.fieldOfView;
-            previewCamera.nearClipPlane = cam.nearClipPlane;
-            previewCamera.farClipPlane = cam.farClipPlane;
-            previewCamera.orthographic = cam.orthographic;
-            previewCamera.orthographicSize = cam.orthographicSize;
+            previewCamera.fieldOfView = sourceCamera.fieldOfView;
+            previewCamera.nearClipPlane = sourceCamera.nearClipPlane;
+            previewCamera.farClipPlane = sourceCamera.farClipPlane;
+            previewCamera.orthographic = sourceCamera.orthographic;
+            previewCamera.orthographicSize = sourceCamera.orthographicSize;
 
             m_orchestrator.Render();
         }
@@ -123,14 +140,15 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             if (!HasPreviewTarget)
                 return;
 
+            if (m_previewRenderUtility.lights.Length > 1)
+                m_previewRenderUtility.lights[1].enabled = false;
+
             Light sourceLight = FindMainSceneLight();
             Light previewLight = m_previewRenderUtility.lights[0];
 
             if (sourceLight == null)
             {
                 previewLight.enabled = false;
-                if (m_previewRenderUtility.lights.Length > 1)
-                    m_previewRenderUtility.lights[1].enabled = false;
                 return;
             }
 
@@ -138,12 +156,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             previewLight.type = sourceLight.type;
             previewLight.color = sourceLight.color;
             previewLight.intensity = sourceLight.intensity;
-            previewLight.transform.SetPositionAndRotation(
-                sourceLight.transform.position,
-                sourceLight.transform.rotation);
-
-            if (m_previewRenderUtility.lights.Length > 1)
-                m_previewRenderUtility.lights[1].enabled = false;
+            previewLight.transform.SetPositionAndRotation(sourceLight.transform.position, sourceLight.transform.rotation);
 
             Unsupported.SetRenderSettingsUseFogNoDirty(false);
             m_previewRenderUtility.ambientColor = RenderSettings.ambientLight;
@@ -167,15 +180,18 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
 
         private GameObject GetRootGameObject(Transform targetTransform)
         {
-            while (targetTransform.parent != null)
+            while (targetTransform.parent != null && !IsAvatarRoot())
                 targetTransform = targetTransform.parent;
             return targetTransform.gameObject;
+
+            bool IsAvatarRoot()
+            {
+                // TODO: SDK 연동
+                return false;
+            }
         }
 
-        private SkinnedMeshRenderer FindMatchingRendererInClone(
-            GameObject sourceRoot,
-            SkinnedMeshRenderer sourceRenderer,
-            GameObject cloneRoot)
+        private SkinnedMeshRenderer FindMatchingRendererInClone(GameObject sourceRoot, SkinnedMeshRenderer sourceRenderer, GameObject cloneRoot)
         {
             var path = GetSiblingIndexPath(sourceRoot.transform, sourceRenderer.transform);
 
