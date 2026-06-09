@@ -32,7 +32,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
         private SkinnedMeshRenderer m_lastTargetMeshRenderer;
         private ReorderableList m_listView;
         private string m_selectedListViewItem;
-        private float m_listViewScrollPosition;
+        private Vector2 m_listViewScrollPosition;
 
         // Properties
         private bool IsPreviewing => m_targetMeshRenderer != null;
@@ -100,9 +100,14 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             GUILayout.Space(12f);
             
             // 리스트 뷰
-            using (new EditorGUILayout.ScrollViewScope(new Vector2(0f, m_listViewScrollPosition)))
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                m_listView.DoLayoutList();
+                using (var scrollView = new EditorGUILayout.ScrollViewScope(m_listViewScrollPosition, GUILayout.Height(250)))
+                {
+                    m_listViewScrollPosition = scrollView.scrollPosition;
+
+                    m_listView.DoLayoutList();
+                }
             }
 
             GUILayout.Space(6f);
@@ -139,7 +144,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
 
         private void InitListView()
         {
-            m_listView = new ReorderableList(items, typeof(string), false, true, false, false) {
+            m_listView = new ReorderableList(items, typeof(string), false, true, true, true) { // TODO: add/remove 버튼 제거
                 drawHeaderCallback = rect =>
                 {
                     EditorGUI.LabelField(rect, "Snapshots");
