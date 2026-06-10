@@ -29,10 +29,12 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
         private IEditorWindowModule[] m_modules;
 
         // For Window
+        private Vector2 m_windowScrollPosition;
         private SkinnedMeshRenderer m_lastTargetMeshRenderer;
         private ReorderableList m_listView;
         private string m_selectedListViewItem;
         private Vector2 m_listViewScrollPosition;
+        private int m_diffViewerTabIndex;
 
         // Properties
         private bool IsPreviewing => m_targetMeshRenderer != null;
@@ -69,22 +71,40 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
         private readonly List<string> items = new() {
             "BlendShape Snapshot 1",
             "BlendShape Snapshot 2",
-            "BlendShape Snapshot 3"
+            "BlendShape Snapshot 3",
+            "BlendShape Snapshot 1",
+            "BlendShape Snapshot 2",
+            "BlendShape Snapshot 3",
+            "BlendShape Snapshot 1",
+            "BlendShape Snapshot 2",
+            "BlendShape Snapshot 3",
+            "BlendShape Snapshot 1",
+            "BlendShape Snapshot 2",
+            "BlendShape Snapshot 3",
+            "BlendShape Snapshot 1",
+            "BlendShape Snapshot 2",
+            "BlendShape Snapshot 3",
+            "BlendShape Snapshot 1",
+            "BlendShape Snapshot 2",
+            "BlendShape Snapshot 3",
+            "BlendShape Snapshot 1",
+            "BlendShape Snapshot 2",
+            "BlendShape Snapshot 3",
         };
 
         private void OnGUI()
         {
-            GUILayout.Space(11f);
-            using (new EditorGUILayout.HorizontalScope())
+            using (var scroll = new EditorGUILayout.ScrollViewScope(m_windowScrollPosition))
             {
-                GUILayout.Space(6f);
-                using (new EditorGUILayout.VerticalScope())
+                m_windowScrollPosition = scroll.scrollPosition;
+                using (new EditorGUILayout.HorizontalScope(new GUIStyle { padding = new RectOffset(11, 11, 11, 11) }))
                 {
-                    DrawContent();
+                    using (new EditorGUILayout.VerticalScope())
+                    {
+                        DrawContent();
+                    }
                 }
-                GUILayout.Space(6f);
             }
-            GUILayout.Space(11f);
         }
 
         private void DrawContent()
@@ -93,25 +113,53 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             DrawSkinnedMeshRendererTarget();
 
             GUILayout.Space(6f);
-            
+
             // 프리뷰 영역
             DrawSnapShotPreview();
 
             GUILayout.Space(12f);
-            
-            // 리스트 뷰
+
+            // 스냅샷 섹션
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                using (var scrollView = new EditorGUILayout.ScrollViewScope(m_listViewScrollPosition, GUILayout.Height(250)))
-                {
-                    m_listViewScrollPosition = scrollView.scrollPosition;
+                // 실제 레이아웃 너비를 0높이 rect로 측정
+                float totalWidth = EditorGUILayout.GetControlRect(GUILayout.Height(0)).width
+                    - 4f; // helpBox 내부 좌우 패딩
+                float halfWidth = Mathf.Floor(totalWidth / 2f);
 
-                    m_listView.DoLayoutList();
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    // 좌측: 리스트 뷰
+                    using (var scrollView = new EditorGUILayout.ScrollViewScope(
+                        m_listViewScrollPosition,
+                        GUILayout.Height(250),
+                        GUILayout.Width(halfWidth)))
+                    {
+                        m_listViewScrollPosition = scrollView.scrollPosition;
+                        m_listView.DoLayoutList();
+                    }
+
+                    // 우측: 변경점 탭
+                    using (new EditorGUILayout.VerticalScope(GUILayout.Width(halfWidth)))
+                    {
+                        m_diffViewerTabIndex = GUILayout.Toolbar(
+                            m_diffViewerTabIndex,
+                            new[] { "이전 스냅샷 기준", "현재 상태 기준" });
+                        switch (m_diffViewerTabIndex)
+                        {
+                            case 0:
+                                EditorGUILayout.LabelField("0번탭");
+                                break;
+                            case 1:
+                                EditorGUILayout.LabelField("1번탭");
+                                break;
+                        }
+                    }
                 }
             }
 
             GUILayout.Space(6f);
-            
+
             // TODO: 나머지 기능들 작성
         }
 
