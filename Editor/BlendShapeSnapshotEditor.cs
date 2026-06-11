@@ -35,7 +35,10 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
         private int m_diffViewerTabIndex;
         private float m_contentWidth;
         private string m_snapshotDescription;
-        
+        private Vector2 m_diffViewerScrollPosition;
+        private Texture2D m_applyBtnNormalTex;
+        private Texture2D m_applyBtnHoverTex;
+
         // Model
         private SkinnedMeshRenderer m_targetMeshRenderer;
         private readonly List<string> m_items = new List<string>();
@@ -55,6 +58,9 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
         {
             InitListView();
 
+            m_applyBtnNormalTex = GUIUtils.MakeTex(1, 1, new Color(0.2f, 0.45f, 0.75f, 1f));
+            m_applyBtnHoverTex = GUIUtils.MakeTex(1, 1, new Color(0.25f, 0.52f, 0.85f, 1f));
+
             m_modules = new IEditorWindowModule[] { m_snapshotPreviewRenderer, m_snapshotRepository };
             foreach (IEditorWindowModule provider in m_modules)
             {
@@ -69,7 +75,10 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             {
                 provider.OnDisable();
             }
-            
+
+            DestroyImmediate(m_applyBtnNormalTex);
+            DestroyImmediate(m_applyBtnHoverTex);
+
             m_lastTargetMeshRenderer = null;
         }
 
@@ -83,10 +92,11 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
                     using (new EditorGUILayout.VerticalScope())
                     {
                         var contentRect = EditorGUILayout.GetControlRect(GUILayout.Height(0));
-                        if (Event.current.type == EventType.Repaint)
-                            m_contentWidth = contentRect.width;
-                        else if (position.width < m_contentWidth)
-                            m_contentWidth = position.width - 31f;
+                        // if (Event.current.type == EventType.Repaint)
+                        //     m_contentWidth = contentRect.width;
+                        // else if (position.width < m_contentWidth)
+                        //     m_contentWidth = position.width - 31f;
+                        m_contentWidth = position.width - 31f;
 
                         DrawContent();
                     }
@@ -109,7 +119,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             DrawSnapShotListAndDiffViewer(); // 스냅샷 섹션 (리스트 & diff뷰어)
 
             GUILayout.Space(6f);
-            
+
             DrawSaveField(); // Save
         }
 
@@ -168,18 +178,94 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
                     using (new EditorGUILayout.VerticalScope(GUILayout.Width(halfWidth)))
                     {
                         m_diffViewerTabIndex = GUILayout.Toolbar(m_diffViewerTabIndex, new[] { "이전 스냅샷 기준", "현재 상태 기준" });
-                        switch (m_diffViewerTabIndex)
+                        using (var scrollView = new EditorGUILayout.ScrollViewScope(m_diffViewerScrollPosition, false, false, GUIStyle.none, GUI.skin.verticalScrollbar, GUI.skin.scrollView, GUILayout.Height(210)))
                         {
-                            case 0:
-                                EditorGUILayout.LabelField("0번탭");
-                                break;
-                            case 1:
-                                EditorGUILayout.LabelField("1번탭");
-                                break;
+                            m_diffViewerScrollPosition = scrollView.scrollPosition;
+                            switch (m_diffViewerTabIndex)
+                            {
+                                case 0:
+                                    for (int i = 0; i < 20; i++)
+                                    {
+                                        EditorGUILayout.LabelField("0번탭");
+                                    }
+                                    break;
+                                case 1:
+                                    EditorGUILayout.LabelField("1번탭");
+                                    break;
+                            }
                         }
+
+                        GUILayout.FlexibleSpace();
+
+                        // Apply 버튼 구분선
+                        var separatorRect = EditorGUILayout.GetControlRect(false, 1f);
+                        EditorGUI.DrawRect(separatorRect, new Color(0f, 0f, 0f, 0.15f));
+
+                        GUILayout.Space(6f);
+
+                        DrawApplySection(halfWidth);
                     }
                 }
             }
+        }
+
+        private void DrawApplySection(float panelWidth)
+        {
+            bool hasSelection = m_listView.index >= 0;
+            bool hasMeshTarget = m_targetMeshRenderer != null;
+            bool canApply = hasSelection && hasMeshTarget;
+
+            using (new EditorGUI.DisabledScope(!canApply))
+            {
+                var applyStyle = new GUIStyle(GUI.skin.button) {
+                    fontStyle = FontStyle.Bold,
+                    fixedHeight = 28f,
+                };
+
+                // 버튼 색 오버라이드: 활성 상태일 때 강조
+                if (canApply)
+                {
+                    applyStyle.normal.background = m_applyBtnNormalTex;
+                    applyStyle.hover.background = m_applyBtnHoverTex;
+                    applyStyle.active.background = m_applyBtnNormalTex;
+                    applyStyle.normal.textColor = Color.white;
+                    applyStyle.hover.textColor = Color.white;
+                    applyStyle.active.textColor = Color.white;
+                }
+
+                string buttonLabel = hasSelection
+                    ? $"▶  \"{GetSelectedSnapshotName()}\" 적용"
+                    : "▶  스냅샷을 선택하세요";
+
+                if (GUILayout.Button(buttonLabel, applyStyle, GUILayout.Width(panelWidth)))
+                {
+                    ApplySnapshot();
+                }
+            }
+
+            // 안내 문구
+            if (!hasMeshTarget)
+            {
+                GUILayout.Space(2f);
+                var hintStyle = new GUIStyle(EditorStyles.centeredGreyMiniLabel) { wordWrap = true };
+                EditorGUILayout.LabelField("대상 Mesh를 먼저 지정해야 적용할 수 있습니다.", hintStyle, GUILayout.Width(panelWidth));
+            }
+
+            GUILayout.Space(6f);
+        }
+
+        private string GetSelectedSnapshotName()
+        {
+            // TODO: 실제 스냅샷 리스트에서 이름 반환
+            // 예: return m_snapshots[m_listView.index].Name;
+            return $"Snapshot_{m_listView.index:D3}";
+        }
+
+        private void ApplySnapshot()
+        {
+            // TODO: 실제 적용 로직
+            // 예: m_snapshots[m_listView.index].ApplyTo(m_targetMeshRenderer);
+            Debug.Log($"[SnapshotViewer] Applied: {GetSelectedSnapshotName()} → {m_targetMeshRenderer.name}");
         }
 
         private void DrawSaveField()
@@ -267,50 +353,50 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
                 },
             };
         }
-        
+
         private void HandleDeleteKey()
-    {
-        Event e = Event.current;
+        {
+            Event e = Event.current;
 
-        if (e.type != EventType.KeyDown)
-            return;
+            if (e.type != EventType.KeyDown)
+                return;
 
-        if (e.keyCode != KeyCode.Delete && e.keyCode != KeyCode.Backspace)
-            return;
+            if (e.keyCode != KeyCode.Delete && e.keyCode != KeyCode.Backspace)
+                return;
 
-        if (m_listView.index < 0 || m_listView.index >= m_items.Count)
-            return;
+            if (m_listView.index < 0 || m_listView.index >= m_items.Count)
+                return;
 
-        TryDeleteSelectedItem();
+            TryDeleteSelectedItem();
 
-        e.Use();
-    }
+            e.Use();
+        }
 
-    private void TryDeleteSelectedItem()
-    {
-        int index = m_listView.index;
+        private void TryDeleteSelectedItem()
+        {
+            int index = m_listView.index;
 
-        if (index < 0 || index >= m_items.Count)
-            return;
+            if (index < 0 || index >= m_items.Count)
+                return;
 
-        string itemName = m_items[index];
+            string itemName = m_items[index];
 
-        bool result = EditorUtility.DisplayDialog(
-            "삭제 확인",
-            $"'{itemName}' 항목을 삭제할까?",
-            "삭제",
-            "취소"
-        );
+            bool result = EditorUtility.DisplayDialog(
+                "삭제 확인",
+                $"'{itemName}' 항목을 삭제할까?",
+                "삭제",
+                "취소"
+                );
 
-        if (!result)
-            return;
+            if (!result)
+                return;
 
-        m_items.RemoveAt(index);
+            m_items.RemoveAt(index);
 
-        m_listView.index = Mathf.Clamp(index, 0, m_items.Count - 1);
+            m_listView.index = Mathf.Clamp(index, 0, m_items.Count - 1);
 
-        Repaint();
-    }
+            Repaint();
+        }
 
         void IEditorWindowOrchestrator.Render()
         {

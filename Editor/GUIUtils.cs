@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace SnowyWalk.BlendShapeSnapshot.Editor
 {
-    public static class Utils
+    public static class GUIUtils
     {
         public static Rect Inset(this Rect rect, float inset)
         {
@@ -64,6 +64,16 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             }
 
             return result;
+        }
+        
+        public static Texture2D MakeTex(int w, int h, Color col)
+        {
+            var pix = new Color[w * h];
+            for (int i = 0; i < pix.Length; i++) pix[i] = col;
+            var t = new Texture2D(w, h);
+            t.SetPixels(pix);
+            t.Apply();
+            return t;
         }
     }
 }
