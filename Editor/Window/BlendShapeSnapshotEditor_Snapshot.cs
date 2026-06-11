@@ -1,163 +1,41 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
-
 namespace SnowyWalk.BlendShapeSnapshot.Editor
 {
-    internal interface IEditorWindowModule
+    public partial class BlendShapeSnapshotEditor
     {
-        public void Initialize(IEditorWindowOrchestrator orchestrator);
-        public void OnEnable();
-        public void OnDisable();
-    }
-
-    internal interface IEditorWindowOrchestrator
-    {
-        public void Render();
-    }
-
-    public class BlendShapeSnapshotEditor : EditorWindow, IEditorWindowOrchestrator
-    {
-        // Modules
-        private readonly SnapshotPreviewRenderer m_snapshotPreviewRenderer = new SnapshotPreviewRenderer();
-        private readonly SnapshotRepository m_snapshotRepository = new SnapshotRepository();
-        private IEditorWindowModule[] m_modules;
-
-        // View
-        private Vector2 m_windowScrollPosition;
-        private SkinnedMeshRenderer m_lastTargetMeshRenderer;
         private ReorderableList m_listView;
-        private string m_selectedListViewItem;
+        
         private Vector2 m_listViewScrollPosition;
         private int m_diffViewerTabIndex;
-        private float m_contentWidth;
-        private string m_snapshotDescription;
         private Vector2 m_diffViewerScrollPosition;
+        private string m_snapshotDescription;
+        
         private Texture2D m_applyBtnNormalTex;
         private Texture2D m_applyBtnHoverTex;
-
-        // Model
-        private SkinnedMeshRenderer m_targetMeshRenderer;
+        
         private readonly List<string> m_items = new List<string>();
 
-        // Properties
-        private bool IsPreviewing => m_targetMeshRenderer != null;
 
-        [MenuItem("Tools/BlendShape Snapshot Manager")]
-        public static void ShowWindow()
+        private void AllocateButtonTextures()
         {
-            var window = GetWindow<BlendShapeSnapshotEditor>("BlendShape Snapshot Manager");
-            window.minSize = new Vector2(470f, 320f);
-            window.Show();
-        }
-
-        private void OnEnable()
-        {
-            InitListView();
-
             m_applyBtnNormalTex = GUIUtils.MakeTex(1, 1, new Color(0.2f, 0.45f, 0.75f, 1f));
             m_applyBtnHoverTex = GUIUtils.MakeTex(1, 1, new Color(0.25f, 0.52f, 0.85f, 1f));
-
-            m_modules = new IEditorWindowModule[] { m_snapshotPreviewRenderer, m_snapshotRepository };
-            foreach (IEditorWindowModule provider in m_modules)
-            {
-                provider.Initialize(this);
-                provider.OnEnable();
-            }
         }
 
-        private void OnDisable()
+        private void ReleaseButtonTextures()
         {
-            foreach (IEditorWindowModule provider in m_modules)
-            {
-                provider.OnDisable();
-            }
-
             DestroyImmediate(m_applyBtnNormalTex);
             DestroyImmediate(m_applyBtnHoverTex);
-
-            m_lastTargetMeshRenderer = null;
-        }
-
-        private void OnGUI()
-        {
-            using (var scroll = new EditorGUILayout.ScrollViewScope(m_windowScrollPosition, false, false, GUIStyle.none, GUI.skin.verticalScrollbar, GUI.skin.scrollView))
-            {
-                m_windowScrollPosition = scroll.scrollPosition;
-                using (new EditorGUILayout.HorizontalScope(new GUIStyle { padding = new RectOffset(11, 11, 11, 0) }))
-                {
-                    using (new EditorGUILayout.VerticalScope())
-                    {
-                        var contentRect = EditorGUILayout.GetControlRect(GUILayout.Height(0));
-                        // if (Event.current.type == EventType.Repaint)
-                        //     m_contentWidth = contentRect.width;
-                        // else if (position.width < m_contentWidth)
-                        //     m_contentWidth = position.width - 31f;
-                        m_contentWidth = position.width - 31f;
-
-                        DrawContent();
-                    }
-                }
-            }
-
-            HandleDeleteKey();
-        }
-
-        private void DrawContent()
-        {
-            DrawSkinnedMeshRendererTarget(); // SMR 넣는 칸
-
-            GUILayout.Space(6f);
-
-            DrawSnapShotPreview(); // 프리뷰 영역
-
-            GUILayout.Space(12f);
-
-            DrawSnapShotListAndDiffViewer(); // 스냅샷 섹션 (리스트 & diff뷰어)
-
-            GUILayout.Space(6f);
-
-            DrawSaveField(); // Save
-        }
-
-        private void DrawSkinnedMeshRendererTarget()
-        {
-            const string label = "대상 Mesh";
-            EditorGUIUtility.labelWidth = EditorStyles.label.CalcSize(new GUIContent(label)).x + 8f;
-            m_targetMeshRenderer = EditorGUILayout.ObjectField(label, m_targetMeshRenderer, typeof(SkinnedMeshRenderer), true, GUILayout.ExpandWidth(true)) as SkinnedMeshRenderer;
-            EditorGUIUtility.labelWidth = 0f;
-
-            if (m_lastTargetMeshRenderer != m_targetMeshRenderer)
-            {
-                m_snapshotPreviewRenderer.CreatePreviewTarget(m_targetMeshRenderer);
-                m_lastTargetMeshRenderer = m_targetMeshRenderer;
-            }
-        }
-
-        private void DrawSnapShotPreview()
-        {
-            float previewWidth = m_contentWidth;
-            Rect previewRect = GUILayoutUtility.GetAspectRect(16f / 9f, GUILayout.Width(previewWidth));
-            GUI.Box(previewRect.Inset(0f), GUIContent.none);
-            if (IsPreviewing)
-            {
-                if (Event.current.type == EventType.Repaint)
-                    m_snapshotPreviewRenderer.Render(previewRect);
-                var labelRect = new Rect(previewRect.x, previewRect.y, previewRect.width, EditorGUIUtility.singleLineHeight);
-                GUI.Label(labelRect, "Overlay Label", EditorStyles.centeredGreyMiniLabel); // TODO: selected snapshot
-            }
-            EditorGUILayout.LabelField("Selected: ", EditorStyles.boldLabel);
         }
 
         private void DrawSnapShotListAndDiffViewer()
         {
-            using (var vertical = new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 float halfWidth = Mathf.Floor((m_contentWidth - 16f) / 2f) - 1f;
-                // Debug.Log($"halfWidth: {halfWidth} {m_contentWidth}");
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
@@ -395,11 +273,6 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
 
             m_listView.index = Mathf.Clamp(index, 0, m_items.Count - 1);
 
-            Repaint();
-        }
-
-        void IEditorWindowOrchestrator.Render()
-        {
             Repaint();
         }
     }
