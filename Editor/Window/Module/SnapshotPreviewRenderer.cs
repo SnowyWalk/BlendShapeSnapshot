@@ -11,10 +11,11 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
         private IEditorWindowOrchestrator m_orchestrator;
 
         private PreviewRenderUtility m_previewRenderUtility;
+        private SkinnedMeshRenderer m_previewSkinnedMeshRenderer;
 
         private bool HasPreviewTarget => m_previewRenderUtility != null;
 
-        public void CreatePreviewTarget(SkinnedMeshRenderer targetSkinnedMeshRenderer, BlendShapeSnapshotDatabase.BlendShapeSnapshot blendShapeSnapshot = null)
+        public void CreatePreviewTarget(SkinnedMeshRenderer targetSkinnedMeshRenderer)
         {
             m_previewRenderUtility?.Cleanup();
             m_previewRenderUtility = null;
@@ -28,9 +29,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             GameObject previewRootGameObject = Object.Instantiate(sourceRootGameObject);
             previewRootGameObject.hideFlags = HideFlags.HideAndDontSave;
 
-            targetSkinnedMeshRenderer = FindMatchingRendererInClone(sourceRootGameObject, targetSkinnedMeshRenderer, previewRootGameObject);
-            if (blendShapeSnapshot != null)
-                blendShapeSnapshot.ApplySnapshot(targetSkinnedMeshRenderer);
+            m_previewSkinnedMeshRenderer = FindMatchingRendererInClone(sourceRootGameObject, targetSkinnedMeshRenderer, previewRootGameObject);
             m_previewRenderUtility.AddSingleGO(previewRootGameObject);
 
             UpdateCamera();
@@ -63,6 +62,15 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             }
         }
 
+        public void ApplySnapshot(BlendShapeSnapshotDatabase.BlendShapeSnapshot blendShapeSnapshot)
+        {
+            if (m_previewSkinnedMeshRenderer == null)
+                return;
+            
+            blendShapeSnapshot.ApplySnapshot(m_previewSkinnedMeshRenderer);
+            m_orchestrator.Render();
+        }
+
         void IEditorWindowModule.Initialize(IEditorWindowOrchestrator orchestrator)
         {
             m_orchestrator = orchestrator;
@@ -79,6 +87,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
 
             m_previewRenderUtility?.Cleanup();
             m_previewRenderUtility = null;
+            m_previewSkinnedMeshRenderer = null;
         }
 
         private void OnSceneViewUpdate(SceneView _)

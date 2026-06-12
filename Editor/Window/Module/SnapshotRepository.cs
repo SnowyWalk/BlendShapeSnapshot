@@ -105,5 +105,12 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
 
             return m_cachedGuid[smr] = snapShotTarget.Guid;
         }
+        
+        public BlendShapeSnapshotDatabase.BlendShapeSnapshot GetSnapshot(SkinnedMeshRenderer smr, int index)
+        {
+            string guid = GetTargetGuid(smr);
+            var snapShotDatabase = GetDatabaseAsset(guid);
+            return snapShotDatabase.BlendShapeSnapshots[index];
+        }
     }
 }

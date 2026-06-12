@@ -13,7 +13,6 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
         // View
         private Vector2 m_windowScrollPosition;
         private SkinnedMeshRenderer m_lastTargetMeshRenderer;
-        private string m_selectedListViewItem;
         private float m_contentWidth;
 
         // Model

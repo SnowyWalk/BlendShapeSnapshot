@@ -17,7 +17,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
                     m_snapshotPreviewRenderer.Render(previewRect);
                 
                 var labelRect = new Rect(previewRect.x, previewRect.y, previewRect.width, EditorGUIUtility.singleLineHeight);
-                GUI.Label(labelRect, "Overlay Label", EditorStyles.centeredGreyMiniLabel); // TODO: selected snapshot
+                GUI.Label(labelRect, m_snapshots != null ? m_snapshots[m_selectedListViewIndex] : string.Empty , EditorStyles.centeredGreyMiniLabel); // TODO: selected snapshot
             }
             
             EditorGUILayout.LabelField("Selected: ", EditorStyles.boldLabel);

@@ -6,17 +6,24 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
 {
     public partial class BlendShapeSnapshotEditor
     {
+        // Model
+        private int m_selectedListViewIndex;
+        
+        // Left
         private ReorderableList m_listView;
-
+        private List<string> m_snapshots;
         private Vector2 m_listViewScrollPosition;
+
+        // Right - Diff View
         private int m_diffViewerTabIndex;
         private Vector2 m_diffViewerScrollPosition;
-        private string m_snapshotDescription;
 
+        // Right - Apply
         private Texture2D m_applyBtnNormalTex;
         private Texture2D m_applyBtnHoverTex;
 
-        private List<string> m_snapshots;
+        // Save
+        private string m_snapshotDescription;
 
         private void AllocateButtonTextures()
         {
@@ -210,7 +217,8 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
         private void UpdateListView()
         {
             m_snapshots = IsPreviewing ? m_snapshotRepository.GetSnapshotLatestOrderedNames(m_targetMeshRenderer) : null;
-            
+            m_selectedListViewIndex = 0;
+
             m_listView = new ReorderableList(m_snapshots, typeof(string), false, true, false, true) {
                 drawHeaderCallback = rect =>
                 {
@@ -222,9 +230,21 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
                 },
                 onSelectCallback = l =>
                 {
-                    // TODO: On Selected 구현
+                    if (!IsPreviewing)
+                        return;
+
+                    m_selectedListViewIndex = l.index;
+
+                    BlendShapeSnapshotDatabase.BlendShapeSnapshot applySnapshot = (m_selectedListViewIndex == 0) ?
+                        new BlendShapeSnapshotDatabase.BlendShapeSnapshot(m_targetMeshRenderer, m_snapshots[m_selectedListViewIndex]) :
+                        m_snapshotRepository.GetSnapshot(m_targetMeshRenderer, m_snapshots.Count - m_selectedListViewIndex - 1);
+
+                    m_snapshotPreviewRenderer.ApplySnapshot(applySnapshot);
                 },
             };
+            
+            if (IsPreviewing)
+                m_listView.Select(0);
         }
 
         private void HandleDeleteKey()
