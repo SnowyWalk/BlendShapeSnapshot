@@ -10,5 +10,10 @@ namespace SnowyWalk.BlendShapeSnapshot
         [SerializeField] private string m_guid;
         
         public string Guid => m_guid;
+
+        public void Init(string guid)
+        {
+            m_guid = guid;
+        }
     }
 }

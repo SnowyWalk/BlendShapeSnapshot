@@ -7,17 +7,16 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
     public partial class BlendShapeSnapshotEditor
     {
         private ReorderableList m_listView;
-        
+
         private Vector2 m_listViewScrollPosition;
         private int m_diffViewerTabIndex;
         private Vector2 m_diffViewerScrollPosition;
         private string m_snapshotDescription;
-        
+
         private Texture2D m_applyBtnNormalTex;
         private Texture2D m_applyBtnHoverTex;
-        
-        private readonly List<string> m_items = new List<string>();
 
+        private List<string> m_snapshots;
 
         private void AllocateButtonTextures()
         {
@@ -100,7 +99,6 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
                     fixedHeight = 28f,
                 };
 
-                // 버튼 색 오버라이드: 활성 상태일 때 강조
                 if (canApply)
                 {
                     applyStyle.normal.background = m_applyBtnNormalTex;
@@ -121,7 +119,6 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
                 }
             }
 
-            // 안내 문구
             if (!hasMeshTarget)
             {
                 GUILayout.Space(2f);
@@ -135,7 +132,6 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
         private string GetSelectedSnapshotName()
         {
             // TODO: 실제 스냅샷 리스트에서 이름 반환
-            // 예: return m_snapshots[m_listView.index].Name;
             return $"Snapshot_{m_listView.index:D3}";
         }
 
@@ -204,26 +200,25 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
         private void SaveSnapshot()
         {
             // TODO: 실제 저장 로직
-            // 예: m_snapshots.Add(new Snapshot(m_targetMeshRenderer, m_snapshotDescription));
-            // m_listView.list = m_snapshots;
+            m_snapshotRepository.Save(m_targetMeshRenderer, m_snapshotDescription);
+
             m_snapshotDescription = string.Empty;
             GUI.FocusControl(null);
             Repaint();
         }
 
-        private void InitListView()
+        private void UpdateListView()
         {
-            m_listView = new ReorderableList(m_items, typeof(string), false, true, true, true) { // TODO: add/remove 버튼 제거
+            m_snapshots = IsPreviewing ? m_snapshotRepository.GetSnapshotLatestOrderedNames(m_targetMeshRenderer) : null;
+            
+            m_listView = new ReorderableList(m_snapshots, typeof(string), false, true, false, true) {
                 drawHeaderCallback = rect =>
                 {
                     EditorGUI.LabelField(rect, "Snapshots");
                 },
                 drawElementCallback = (rect, index, isActive, isFocused) =>
                 {
-                    EditorGUI.LabelField(
-                        new Rect(rect.x, rect.y, rect.width, EditorGUIUtility.singleLineHeight),
-                        m_items[index]
-                        );
+                    EditorGUI.LabelField(new Rect(rect.x, rect.y, rect.width, EditorGUIUtility.singleLineHeight), m_snapshots[index]);
                 },
                 onSelectCallback = l =>
                 {
@@ -242,7 +237,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             if (e.keyCode != KeyCode.Delete && e.keyCode != KeyCode.Backspace)
                 return;
 
-            if (m_listView.index < 0 || m_listView.index >= m_items.Count)
+            if (m_listView.index < 0 || m_listView.index >= m_snapshots.Count)
                 return;
 
             TryDeleteSelectedItem();
@@ -254,10 +249,10 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
         {
             int index = m_listView.index;
 
-            if (index < 0 || index >= m_items.Count)
+            if (index < 0 || index >= m_snapshots.Count)
                 return;
 
-            string itemName = m_items[index];
+            string itemName = m_snapshots[index];
 
             bool result = EditorUtility.DisplayDialog(
                 "삭제 확인",
@@ -269,9 +264,9 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             if (!result)
                 return;
 
-            m_items.RemoveAt(index);
+            m_snapshots.RemoveAt(index);
 
-            m_listView.index = Mathf.Clamp(index, 0, m_items.Count - 1);
+            m_listView.index = Mathf.Clamp(index, 0, m_snapshots.Count - 1);
 
             Repaint();
         }

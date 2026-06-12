@@ -63,7 +63,7 @@ namespace SnowyWalk.BlendShapeSnapshot
         [SerializeField] private string m_targetGuid; // 그냥 Pair 찾는 용도의 보조 필드
         [SerializeField] private List<BlendShapeSnapshot> m_blendShapeSnapshotList = new List<BlendShapeSnapshot>();
 
-        public IEnumerable<BlendShapeSnapshot> BlendShapeSnapshots => m_blendShapeSnapshotList;
+        public IReadOnlyList<BlendShapeSnapshot> BlendShapeSnapshots => m_blendShapeSnapshotList;
         public string TargetGuid => m_targetGuid;
         
         public void Init(string targetGuid)

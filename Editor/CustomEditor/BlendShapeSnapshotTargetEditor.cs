@@ -1,4 +1,5 @@
 using UnityEditor;
+using UnityEngine;
 
 namespace SnowyWalk.BlendShapeSnapshot.Editor
 {
@@ -26,7 +27,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
                 InvalidateCache();
                 m_target = (BlendShapeSnapshotTarget)target;
             }
-            
+
             BlendShapeSnapshotTarget component = (BlendShapeSnapshotTarget)target;
 
             EditorGUILayout.LabelField($"Guid: {component.Guid}", EditorStyles.boldLabel);
@@ -38,11 +39,16 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
                     bool cacheSuccess = CacheDatabase(component.Guid);
                     m_isCacheFailed = !cacheSuccess;
                 }
-                
+
                 if (m_isCacheFailed)
                 {
                     EditorGUILayout.HelpBox("대응되는 저장소를 찾지 못했음", MessageType.Error);
                 }
+            }
+
+            if (m_cachedDatabase != null)
+            {
+                EditorGUILayout.ObjectField("Database Asset", m_cachedDatabase, typeof(BlendShapeSnapshotDatabase), false);
             }
         }
 
@@ -61,7 +67,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
                 BlendShapeSnapshotDatabase database = AssetDatabase.LoadAssetAtPath<BlendShapeSnapshotDatabase>(path);
                 if (database == null || database.TargetGuid != guid)
                     continue;
-                
+
                 m_cachedDatabase = database;
                 return true;
             }

@@ -1,4 +1,4 @@
-using System.Linq;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 namespace SnowyWalk.BlendShapeSnapshot.Editor
@@ -9,16 +9,15 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
         public override void OnInspectorGUI()
         {
             BlendShapeSnapshotDatabase database = (BlendShapeSnapshotDatabase)target;
-            EditorGUILayout.LabelField($"Target Guid: {database.TargetGuid}", EditorStyles.boldLabel);
-            EditorGUILayout.LabelField($"Snapshot List ({database.BlendShapeSnapshots.Count()}):");
+            IReadOnlyList<BlendShapeSnapshotDatabase.BlendShapeSnapshot> snapshots = database.BlendShapeSnapshots;
+            EditorGUILayout.LabelField($"Target Guid: {database.TargetGuid}", EditorStyles.boldLabel); // TODO: ObjectField + 리프레쉬 버튼 적용
+            EditorGUILayout.LabelField($"Snapshot List: (Total: {snapshots.Count})");
 
             EditorGUI.indentLevel++;
-            int index = 1;
-            foreach (BlendShapeSnapshotDatabase.BlendShapeSnapshot snapshot in database.BlendShapeSnapshots)
+            for (int i = snapshots.Count - 1; i >= 0; i--)
             {
-                EditorGUILayout.LabelField($"{index++}.", EditorStyles.boldLabel);
-                EditorGUILayout.LabelField($"Snapshot Time: {snapshot.SnapshotTime}");
-                EditorGUILayout.LabelField($"Description: {snapshot.Description}");
+                BlendShapeSnapshotDatabase.BlendShapeSnapshot snapshot = snapshots[i];
+                EditorGUILayout.LabelField($"{i + 1}. {snapshot.SnapshotTime}   ·   {snapshot.Description}", EditorStyles.boldLabel);
 
                 string foldoutKey = $"BlendShapeSnapshot.{database.TargetGuid}.{snapshot.SnapshotTime}";
                 bool lastIsOpen = GetFoldoutState(foldoutKey);
@@ -41,7 +40,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
                 EditorGUILayout.Space();
             }
             EditorGUI.indentLevel--;
-            
+
         }
 
         private static bool DrawFoldoutSection(string title, bool isOpen, System.Action drawContent)

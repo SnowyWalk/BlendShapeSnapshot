@@ -1,6 +1,4 @@
-using System.Collections.Generic;
 using UnityEditor;
-using UnityEditorInternal;
 using UnityEngine;
 
 namespace SnowyWalk.BlendShapeSnapshot.Editor
@@ -34,7 +32,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
 
         private void OnEnable()
         {
-            InitListView();
+            UpdateListView();
             AllocateButtonTextures();
 
             m_modules = new IEditorWindowModule[] { m_snapshotPreviewRenderer, m_snapshotRepository };
@@ -103,6 +101,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             if (m_lastTargetMeshRenderer != m_targetMeshRenderer)
             {
                 m_snapshotPreviewRenderer.CreatePreviewTarget(m_targetMeshRenderer);
+                UpdateListView();
                 m_lastTargetMeshRenderer = m_targetMeshRenderer;
             }
         }

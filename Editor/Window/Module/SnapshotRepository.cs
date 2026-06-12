@@ -1,4 +1,7 @@
+using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
 namespace SnowyWalk.BlendShapeSnapshot.Editor
@@ -6,15 +9,19 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
     public class SnapshotRepository : IEditorWindowModule
     {
         private const string m_basePath = "Assets/BlendShapeSnapshots";
-        
+
         private IEditorWindowOrchestrator m_orchestrator;
-        
+
+
+        private BlendShapeSnapshotDatabase m_cachedDatabase;
+        private readonly Dictionary<SkinnedMeshRenderer, string> m_cachedGuid = new Dictionary<SkinnedMeshRenderer, string>();
+
 
         void IEditorWindowModule.Initialize(IEditorWindowOrchestrator orchestrator)
         {
             m_orchestrator = orchestrator;
         }
-        
+
         void IEditorWindowModule.OnEnable()
         {
             // TODO:
@@ -25,48 +32,78 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             // TODO:
         }
 
-        public void Save(SkinnedMeshRenderer smr)
+        public void Save(SkinnedMeshRenderer smr, string description)
         {
-            // TODO: Save
-            // var smr = targetGameObject.GetComponent<SkinnedMeshRenderer>();
-            //
-            // BlendShapeSnapshotDatabase blendShapeSnapshotDatabase = ScriptableObject.CreateInstance<BlendShapeSnapshotDatabase>();
-            // blendShapeSnapshotDatabase.CaptureBlendShapeKeys(smr);
-            
-        }
-
-        [MenuItem("Tools/BlendShape Snapshot Manager Test/Save Test")]
-        private static void SaveTest()
-        {
-            var asset = ScriptableObject.CreateInstance<BlendShapeSnapshotDatabase>();
-            string assetPath = Path.Combine(m_basePath, "BlendShapeSnapshot.asset").Replace("\\", "/");
-
-            EnsureDirectoryForAssetPath(assetPath);
-            AssetDatabase.CreateAsset(asset, assetPath);
+            var snapshotTargetComponent = smr.GetComponentInChildren<BlendShapeSnapshotTarget>() ?? CreateSnapshotTarget(smr.gameObject);
+            var snapshotDatabase = GetDatabaseAsset(snapshotTargetComponent.Guid);
+            snapshotDatabase.AddSnapshot(smr, description);
+            EditorUtility.SetDirty(snapshotDatabase);
             AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
 
-            EditorUtility.FocusProjectWindow();
-            Selection.activeObject = asset;
+            m_cachedGuid[smr] = snapshotTargetComponent.Guid;
         }
 
-        private static void EnsureDirectoryForAssetPath(string assetPath)
+        private static BlendShapeSnapshotTarget CreateSnapshotTarget(GameObject targetGameObject)
         {
-            string directoryPath = Path.GetDirectoryName(assetPath)?.Replace("\\", "/");
-            if (string.IsNullOrEmpty(directoryPath) || AssetDatabase.IsValidFolder(directoryPath))
-                return;
+            // Create Child GameObject
+            string name = $"{targetGameObject.name} - BlendShapeSnapshotTarget";
+            GameObject childGameObject = new GameObject(name);
+            Undo.RegisterCreatedObjectUndo(childGameObject, "Create Child Object");
+            childGameObject.transform.SetParent(targetGameObject.transform, false);
 
-            string[] pathParts = directoryPath.Split('/');
-            string currentPath = pathParts[0];
-            for (int i = 1; i < pathParts.Length; i++)
+            // Add Component & Allocate Guid
+            string newGuid = Guid.NewGuid().ToString();
+            var snapshotTargetComponent = childGameObject.AddComponent<BlendShapeSnapshotTarget>();
+            snapshotTargetComponent.Init(newGuid);
+            EditorUtility.SetDirty(snapshotTargetComponent);
+
+            // Make pair Database Asset
+            var blendShapeSnapshotDatabase = ScriptableObject.CreateInstance<BlendShapeSnapshotDatabase>();
+            blendShapeSnapshotDatabase.Init(newGuid);
+            if (!AssetDatabase.IsValidFolder(m_basePath))
             {
-                string nextFolderName = pathParts[i];
-                string nextPath = $"{currentPath}/{nextFolderName}";
-                if (!AssetDatabase.IsValidFolder(nextPath))
-                    AssetDatabase.CreateFolder(currentPath, nextFolderName);
-
-                currentPath = nextPath;
+                var regex = new Regex("(.*)/(.*)");
+                AssetDatabase.CreateFolder(regex.Match(m_basePath).Groups[1].Value, regex.Match(m_basePath).Groups[2].Value);
             }
+            AssetDatabase.CreateAsset(blendShapeSnapshotDatabase, $"{m_basePath}/{newGuid}.asset");
+            // AssetDatabase.SaveAssets(); // 밖에서 어차피 호출할거라 생략
+
+            return snapshotTargetComponent;
+        }
+
+        private BlendShapeSnapshotDatabase GetDatabaseAsset(string guid)
+        {
+            if (m_cachedDatabase != null && m_cachedDatabase.TargetGuid == guid)
+                return m_cachedDatabase;
+
+            string assetPath = $"{m_basePath}/{guid}.asset";
+            return m_cachedDatabase = AssetDatabase.LoadAssetAtPath<BlendShapeSnapshotDatabase>(assetPath);
+        }
+
+        public List<string> GetSnapshotLatestOrderedNames(SkinnedMeshRenderer smr)
+        {
+            List<string> names = new List<string>();
+            names.Add("(현재 상태)");
+            string guid = GetTargetGuid(smr);
+            var snapShotDatabase = GetDatabaseAsset(guid);
+            for (int i = snapShotDatabase.BlendShapeSnapshots.Count - 1; i >= 0; i--)
+            {
+                var snapShot = snapShotDatabase.BlendShapeSnapshots[i];
+                names.Add($"{i + 1}. {snapShot.SnapshotTime} · {snapShot.Description}");
+            }
+            return names;
+        }
+
+        private string GetTargetGuid(SkinnedMeshRenderer smr)
+        {
+            if (m_cachedGuid.TryGetValue(smr, out string guid))
+                return guid;
+
+            var snapShotTarget = smr.GetComponentInChildren<BlendShapeSnapshotTarget>();
+            if (snapShotTarget == null)
+                return null;
+
+            return m_cachedGuid[smr] = snapShotTarget.Guid;
         }
     }
 }
