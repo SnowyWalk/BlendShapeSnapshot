@@ -8,7 +8,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
     {
         // Model
         private int m_selectedListViewIndex;
-        
+
         // Left
         private ReorderableList m_listView;
         private List<string> m_snapshots;
@@ -206,8 +206,13 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
 
         private void SaveSnapshot()
         {
-            // TODO: 실제 저장 로직
             m_snapshotRepository.Save(m_targetMeshRenderer, m_snapshotDescription);
+            UpdateListView();
+            if (IsPreviewing)
+            {
+                m_listView.Select(1);
+                OnSelectListViewItem(1);
+            }
 
             m_snapshotDescription = string.Empty;
             GUI.FocusControl(null);
@@ -230,21 +235,23 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
                 },
                 onSelectCallback = l =>
                 {
-                    if (!IsPreviewing)
-                        return;
-
-                    m_selectedListViewIndex = l.index;
-
-                    BlendShapeSnapshotDatabase.BlendShapeSnapshot applySnapshot = (m_selectedListViewIndex == 0) ?
-                        new BlendShapeSnapshotDatabase.BlendShapeSnapshot(m_targetMeshRenderer, m_snapshots[m_selectedListViewIndex]) :
-                        m_snapshotRepository.GetSnapshot(m_targetMeshRenderer, m_snapshots.Count - m_selectedListViewIndex - 1);
-
-                    m_snapshotPreviewRenderer.ApplySnapshot(applySnapshot);
+                    OnSelectListViewItem(l.index);
                 },
             };
-            
-            if (IsPreviewing)
-                m_listView.Select(0);
+        }
+
+        private void OnSelectListViewItem(int index)
+        {
+            if (!IsPreviewing)
+                return;
+
+            m_selectedListViewIndex = index;
+
+            BlendShapeSnapshotDatabase.BlendShapeSnapshot applySnapshot = (m_selectedListViewIndex == 0) ?
+                new BlendShapeSnapshotDatabase.BlendShapeSnapshot(m_targetMeshRenderer, m_snapshots[m_selectedListViewIndex]) :
+                m_snapshotRepository.GetSnapshot(m_targetMeshRenderer, m_snapshots.Count - m_selectedListViewIndex - 1);
+
+            m_snapshotPreviewRenderer.ApplySnapshot(applySnapshot);
         }
 
         private void HandleDeleteKey()
@@ -285,18 +292,18 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
                 return;
 
             m_snapshots.RemoveAt(index);
-            
+
             // TODO: 데이터베이스에서도 대상 제거
 
             m_listView.index = Mathf.Clamp(index, 0, m_snapshots.Count - 1);
 
             Repaint();
         }
-        
+
         private void HandleRenameKey()
         {
             Event e = Event.current;
-            
+
             if (e.type != EventType.KeyDown)
                 return;
 
@@ -305,7 +312,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
 
             if (m_listView.index < 0 || m_listView.index >= m_snapshots.Count)
                 return;
-            
+
             // TODO: 이름 변경 박스 띄워서 이름 변경하기
         }
     }

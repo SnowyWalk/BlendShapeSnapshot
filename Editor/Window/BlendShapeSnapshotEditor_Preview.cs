@@ -20,7 +20,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
                 GUI.Label(labelRect, m_snapshots != null ? m_snapshots[m_selectedListViewIndex] : string.Empty , EditorStyles.centeredGreyMiniLabel); // TODO: selected snapshot
             }
             
-            EditorGUILayout.LabelField("Selected: ", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField($"Selected: {m_selectedListViewIndex} {(IsPreviewing && m_snapshots != null ? m_snapshots[m_selectedListViewIndex] : string.Empty)}", EditorStyles.boldLabel);
         }
     }
 }

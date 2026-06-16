@@ -32,6 +32,8 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
         private void OnEnable()
         {
             UpdateListView();
+            if (IsPreviewing)
+                m_listView.Select(0);
             AllocateButtonTextures();
 
             m_modules = new IEditorWindowModule[] { m_snapshotPreviewRenderer, m_snapshotRepository };
@@ -102,6 +104,9 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             {
                 m_snapshotPreviewRenderer.CreatePreviewTarget(m_targetMeshRenderer);
                 UpdateListView();
+                if (IsPreviewing)
+                    m_listView.Select(0);
+                
                 m_lastTargetMeshRenderer = m_targetMeshRenderer;
             }
         }
