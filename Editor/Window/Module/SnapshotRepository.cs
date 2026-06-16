@@ -36,6 +36,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
         {
             var snapshotTargetComponent = smr.GetComponentInChildren<BlendShapeSnapshotTarget>() ?? CreateSnapshotTarget(smr.gameObject);
             var snapshotDatabase = GetDatabaseAsset(snapshotTargetComponent.Guid);
+            // TODO: 대응 DB에셋이 사라진 경우에 여기서 null이 들어간다. MsgBox yes/no 를 띄워서 DB에셋이 사라졌으니 새로 만들어서 진행할까요 하고 묻기 
             snapshotDatabase.AddSnapshot(smr, description);
             EditorUtility.SetDirty(snapshotDatabase);
             AssetDatabase.SaveAssets();
@@ -85,6 +86,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             List<string> names = new List<string>();
             names.Add("(현재 상태)");
             string guid = GetTargetGuid(smr);
+            // TODO: Target이 없는 신규 오브젝트면 여기서 guid가 null이다. 그것에 대한 예외처리 추가 필요
             var snapShotDatabase = GetDatabaseAsset(guid);
             for (int i = snapShotDatabase.BlendShapeSnapshots.Count - 1; i >= 0; i--)
             {

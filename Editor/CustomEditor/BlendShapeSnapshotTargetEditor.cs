@@ -49,6 +49,8 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             if (m_cachedDatabase != null)
             {
                 EditorGUILayout.ObjectField("Database Asset", m_cachedDatabase, typeof(BlendShapeSnapshotDatabase), false);
+                
+                // TODO: 사용자가 에셋을 갈아낄 수 있게 하고, 옆에 New 버튼을 제공해서 새 데이터베이스 에셋을 생성&연결할 수 있게끔 하기
             }
         }
 

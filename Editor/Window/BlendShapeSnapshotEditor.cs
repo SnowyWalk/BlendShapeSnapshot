@@ -71,6 +71,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             }
 
             HandleDeleteKey();
+            HandleRenameKey();
         }
 
         private void DrawContent()

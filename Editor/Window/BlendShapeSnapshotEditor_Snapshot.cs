@@ -254,7 +254,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             if (e.type != EventType.KeyDown)
                 return;
 
-            if (e.keyCode != KeyCode.Delete && e.keyCode != KeyCode.Backspace)
+            if (e.keyCode != KeyCode.Delete)
                 return;
 
             if (m_listView.index < 0 || m_listView.index >= m_snapshots.Count)
@@ -269,7 +269,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
         {
             int index = m_listView.index;
 
-            if (index < 0 || index >= m_snapshots.Count)
+            if (index <= 0 || index >= m_snapshots.Count) // (현재 상태) 행도 삭제못하게 index 0도 리턴처리
                 return;
 
             string itemName = m_snapshots[index];
@@ -285,10 +285,28 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
                 return;
 
             m_snapshots.RemoveAt(index);
+            
+            // TODO: 데이터베이스에서도 대상 제거
 
             m_listView.index = Mathf.Clamp(index, 0, m_snapshots.Count - 1);
 
             Repaint();
+        }
+        
+        private void HandleRenameKey()
+        {
+            Event e = Event.current;
+            
+            if (e.type != EventType.KeyDown)
+                return;
+
+            if (e.keyCode != KeyCode.F2)
+                return;
+
+            if (m_listView.index < 0 || m_listView.index >= m_snapshots.Count)
+                return;
+            
+            // TODO: 이름 변경 박스 띄워서 이름 변경하기
         }
     }
 }
