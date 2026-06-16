@@ -62,6 +62,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
 
         private bool CacheDatabase(string guid)
         {
+            // TODO: guid를 통해 DB에셋을 찾는 행위는 Repository의 함수를 통해서 하기 (아래 싹 다 수정)
             string[] databases = AssetDatabase.FindAssets($"t:{nameof(BlendShapeSnapshotDatabase)}");
             foreach (string assetGuid in databases)
             {
