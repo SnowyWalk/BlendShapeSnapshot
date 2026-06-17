@@ -37,14 +37,45 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
         private const float kSaveBottomSpacing = 16f;
         private const float kSaveOuterBottomSpacing = 20f;
         private const float kSaveButtonHeight = 28f;
+        private const float kFallbackHelpBoxFrameHeight = 8f;
+        private const float kFallbackHelpBoxPaddingHorizontal = 8f;
         private const string kApplyNoTargetHint = "대상 Mesh를 먼저 지정해야 적용할 수 있습니다.";
         private const string kSaveNoTargetHint = "대상 Mesh를 먼저 지정해야 저장할 수 있습니다.";
 
         private static float DiffToolbarHeight => EditorGUIUtility.singleLineHeight + 2f;
-        private static float HelpBoxFrameHeight => EditorStyles.helpBox.padding.vertical + EditorStyles.helpBox.margin.vertical;
-        private static float ApplyHintHeight(float panelWidth) => NoWrapHintStyle.CalcHeight(new GUIContent(kApplyNoTargetHint), panelWidth);
-        private static float SaveHintHeight(float panelWidth) => NoWrapHintStyle.CalcHeight(new GUIContent(kSaveNoTargetHint), panelWidth);
+        private static float HelpBoxFrameHeight => TryGetHelpBoxStyle(out GUIStyle helpBox) ? helpBox.padding.vertical + helpBox.margin.vertical : kFallbackHelpBoxFrameHeight;
+        private static float HelpBoxPaddingHorizontal => TryGetHelpBoxStyle(out GUIStyle helpBox) ? helpBox.padding.horizontal : kFallbackHelpBoxPaddingHorizontal;
+        private static float ApplyHintHeight(float panelWidth) => TryGetNoWrapHintStyle(out GUIStyle style) ? style.CalcHeight(new GUIContent(kApplyNoTargetHint), panelWidth) : LineHeight;
+        private static float SaveHintHeight(float panelWidth) => TryGetNoWrapHintStyle(out GUIStyle style) ? style.CalcHeight(new GUIContent(kSaveNoTargetHint), panelWidth) : LineHeight;
         private static GUIStyle NoWrapHintStyle => new GUIStyle(EditorStyles.centeredGreyMiniLabel) { wordWrap = false, clipping = TextClipping.Clip };
+        private static bool TryGetHelpBoxStyle(out GUIStyle style)
+        {
+            try
+            {
+                style = EditorStyles.helpBox;
+                return style != null;
+            }
+            catch (System.NullReferenceException)
+            {
+                style = null;
+                return false;
+            }
+        }
+
+        private static bool TryGetNoWrapHintStyle(out GUIStyle style)
+        {
+            try
+            {
+                style = NoWrapHintStyle;
+                return style != null;
+            }
+            catch (System.NullReferenceException)
+            {
+                style = null;
+                return false;
+            }
+        }
+
         private static float GetApplySectionReservedHeight(float panelWidth, bool hasMeshTarget)
         {
             float hintHeight = hasMeshTarget ? 0f : kApplyHintTopSpacing + ApplyHintHeight(panelWidth);
@@ -53,7 +84,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
 
         private static float GetSaveSectionReservedHeight(float panelWidth, bool hasMeshTarget)
         {
-            float helpBoxContentWidth = Mathf.Max(0f, panelWidth - EditorStyles.helpBox.padding.horizontal);
+            float helpBoxContentWidth = Mathf.Max(0f, panelWidth - HelpBoxPaddingHorizontal);
             float hintHeight = hasMeshTarget ? 0f : kSaveHintTopSpacing + SaveHintHeight(helpBoxContentWidth);
 
             return kSaveOuterTopSpacing +
@@ -107,7 +138,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
                     using (new EditorGUILayout.VerticalScope(GUILayout.Width(halfWidth), GUILayout.Height(bodyHeight)))
                     {
                         m_diffViewerTabIndex = GUILayout.Toolbar(m_diffViewerTabIndex, new[] { "이전 스냅샷 기준", "현재 상태 기준" }, GUILayout.Height(DiffToolbarHeight));
-                        bool hasMeshTarget = m_targetMeshRenderer != null;
+                        bool hasMeshTarget = m_targetMeshRenderer != null && m_targetMeshRenderer.sharedMesh != null;
                         float applySectionReservedHeight = GetApplySectionReservedHeight(halfWidth, hasMeshTarget);
                         float diffScrollHeight = Mathf.Max(0f, bodyHeight - DiffToolbarHeight - kSeparatorHeight - kSeparatorToApplySpacing - applySectionReservedHeight);
 
@@ -117,13 +148,10 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
                             switch (m_diffViewerTabIndex)
                             {
                                 case 0:
-                                    for (int i = 0; i < 20; i++)
-                                    {
-                                        EditorGUILayout.LabelField("0번탭");
-                                    }
+                                    DrawDiffView(DiffBasis.PreviousSnapshot, halfWidth);
                                     break;
                                 case 1:
-                                    EditorGUILayout.LabelField("1번탭");
+                                    DrawDiffView(DiffBasis.CurrentState, halfWidth);
                                     break;
                             }
                         }
@@ -143,7 +171,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
         private void DrawApplySection(float panelWidth, float sectionHeight)
         {
             bool hasSelection = m_listView != null && m_listView.index >= 0;
-            bool hasMeshTarget = m_targetMeshRenderer != null;
+            bool hasMeshTarget = m_targetMeshRenderer != null && m_targetMeshRenderer.sharedMesh != null;
             bool canApply = hasSelection && hasMeshTarget;
 
             using (new EditorGUILayout.VerticalScope(GUILayout.Width(panelWidth), GUILayout.Height(sectionHeight)))
@@ -194,13 +222,14 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
         private void ApplySnapshot()
         {
             // TODO: 실제 적용 로직
+            // TODO: 현재 상태의 변경사항이 날아간다는 경고문 필요
             // 예: m_snapshots[m_listView.index].ApplyTo(m_targetMeshRenderer);
             Debug.Log($"[SnapshotViewer] Applied: {GetSelectedSnapshotName()} → {m_targetMeshRenderer.name}");
         }
 
         private void DrawSaveField()
         {
-            bool canSave = m_targetMeshRenderer != null;
+            bool canSave = m_targetMeshRenderer != null && m_targetMeshRenderer.sharedMesh != null;
             float saveSectionHeight = GetSaveSectionReservedHeight(m_contentWidth, canSave);
 
             using (new EditorGUILayout.VerticalScope(GUILayout.Height(saveSectionHeight)))
@@ -245,7 +274,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
                     if (!canSave)
                     {
                         GUILayout.Space(kSaveHintTopSpacing);
-                        float helpBoxContentWidth = Mathf.Max(0f, m_contentWidth - EditorStyles.helpBox.padding.horizontal);
+                        float helpBoxContentWidth = Mathf.Max(0f, m_contentWidth - HelpBoxPaddingHorizontal);
                         EditorGUILayout.LabelField(kSaveNoTargetHint, NoWrapHintStyle, GUILayout.Width(helpBoxContentWidth), GUILayout.Height(SaveHintHeight(helpBoxContentWidth)));
                     }
 
@@ -258,6 +287,11 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
 
         private void SaveSnapshot()
         {
+            if (m_targetMeshRenderer == null || m_targetMeshRenderer.sharedMesh == null)
+                return;
+            
+            // TODO: 이전 스냅샷과 변동이 없으면 안내문 띄워주기 (그래도 스냅샷 찍을까요? 네/아니오)
+
             m_snapshotRepository.Save(m_targetMeshRenderer, m_snapshotDescription);
             UpdateListView();
             if (IsPreviewing)
@@ -297,11 +331,20 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             if (!IsPreviewing)
                 return;
 
+            if (m_targetMeshRenderer == null || m_targetMeshRenderer.sharedMesh == null)
+                return;
+
             m_selectedListViewIndex = index;
 
-            BlendShapeSnapshotDatabase.BlendShapeSnapshot applySnapshot = (m_selectedListViewIndex == 0) ?
-                new BlendShapeSnapshotDatabase.BlendShapeSnapshot(m_targetMeshRenderer, m_snapshots[m_selectedListViewIndex]) :
-                m_snapshotRepository.GetSnapshot(m_targetMeshRenderer, m_snapshots.Count - m_selectedListViewIndex - 1);
+            BlendShapeSnapshotDatabase.BlendShapeSnapshot applySnapshot;
+            if (m_selectedListViewIndex == 0)
+            {
+                applySnapshot = new BlendShapeSnapshotDatabase.BlendShapeSnapshot(m_targetMeshRenderer, m_snapshots[m_selectedListViewIndex]);
+            }
+            else if (!m_snapshotRepository.TryGetSnapshot(m_targetMeshRenderer, m_snapshots.Count - m_selectedListViewIndex - 1, out applySnapshot))
+            {
+                return;
+            }
 
             m_snapshotPreviewRenderer.ApplySnapshot(applySnapshot);
         }

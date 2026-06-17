@@ -24,19 +24,16 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
 
         void IEditorWindowModule.OnEnable()
         {
-            // TODO:
         }
 
         void IEditorWindowModule.OnDisable()
         {
-            // TODO:
         }
 
         public void Save(SkinnedMeshRenderer smr, string description)
         {
             var snapshotTargetComponent = smr.GetComponentInChildren<BlendShapeSnapshotTarget>() ?? CreateSnapshotTarget(smr.gameObject);
-            var snapshotDatabase = GetDatabaseAsset(snapshotTargetComponent.Guid);
-            // TODO: 대응 DB에셋이 사라진 경우에 여기서 null이 들어간다. MsgBox yes/no 를 띄워서 DB에셋이 사라졌으니 새로 만들어서 진행할까요 하고 묻기 
+            var snapshotDatabase = GetDatabaseAsset(snapshotTargetComponent.Guid) ?? CreateDatabaseAsset(snapshotTargetComponent.Guid);
             snapshotDatabase.AddSnapshot(smr, description);
             EditorUtility.SetDirty(snapshotDatabase);
             AssetDatabase.SaveAssets();
@@ -59,17 +56,24 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             EditorUtility.SetDirty(snapshotTargetComponent);
 
             // Make pair Database Asset
+            CreateDatabaseAsset(newGuid);
+
+            return snapshotTargetComponent;
+        }
+
+        private static BlendShapeSnapshotDatabase CreateDatabaseAsset(string targetGuid)
+        {
             var blendShapeSnapshotDatabase = ScriptableObject.CreateInstance<BlendShapeSnapshotDatabase>();
-            blendShapeSnapshotDatabase.Init(newGuid);
+            blendShapeSnapshotDatabase.Init(targetGuid);
             if (!AssetDatabase.IsValidFolder(m_basePath))
             {
                 var regex = new Regex("(.*)/(.*)");
                 AssetDatabase.CreateFolder(regex.Match(m_basePath).Groups[1].Value, regex.Match(m_basePath).Groups[2].Value);
             }
-            AssetDatabase.CreateAsset(blendShapeSnapshotDatabase, $"{m_basePath}/{newGuid}.asset");
+            AssetDatabase.CreateAsset(blendShapeSnapshotDatabase, $"{m_basePath}/{targetGuid}.asset");
             // AssetDatabase.SaveAssets(); // 밖에서 어차피 호출할거라 생략
 
-            return snapshotTargetComponent;
+            return blendShapeSnapshotDatabase;
         }
 
         private BlendShapeSnapshotDatabase GetDatabaseAsset(string guid)
@@ -81,13 +85,33 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             return m_cachedDatabase = AssetDatabase.LoadAssetAtPath<BlendShapeSnapshotDatabase>(assetPath);
         }
 
+        public bool TryGetSnapshotDatabase(SkinnedMeshRenderer smr, out BlendShapeSnapshotDatabase database)
+        {
+            database = null;
+
+            string guid = GetTargetGuid(smr);
+            if (string.IsNullOrEmpty(guid))
+                return false;
+
+            database = GetDatabaseAsset(guid);
+            return database != null;
+        }
+
+        public int GetSnapshotCount(SkinnedMeshRenderer smr)
+        {
+            return TryGetSnapshotDatabase(smr, out BlendShapeSnapshotDatabase database)
+                ? database.BlendShapeSnapshots.Count
+                : 0;
+        }
+
         public List<string> GetSnapshotLatestOrderedNames(SkinnedMeshRenderer smr)
         {
             List<string> names = new List<string>();
             names.Add("(현재 상태)");
-            string guid = GetTargetGuid(smr);
-            // TODO: Target이 없는 신규 오브젝트면 여기서 guid가 null이다. 그것에 대한 예외처리 추가 필요
-            var snapShotDatabase = GetDatabaseAsset(guid);
+
+            if (!TryGetSnapshotDatabase(smr, out BlendShapeSnapshotDatabase snapShotDatabase))
+                return names;
+
             for (int i = snapShotDatabase.BlendShapeSnapshots.Count - 1; i >= 0; i--)
             {
                 var snapShot = snapShotDatabase.BlendShapeSnapshots[i];
@@ -98,6 +122,9 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
 
         private string GetTargetGuid(SkinnedMeshRenderer smr)
         {
+            if (smr == null)
+                return null;
+
             if (m_cachedGuid.TryGetValue(smr, out string guid))
                 return guid;
 
@@ -110,9 +137,24 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
         
         public BlendShapeSnapshotDatabase.BlendShapeSnapshot GetSnapshot(SkinnedMeshRenderer smr, int index)
         {
-            string guid = GetTargetGuid(smr);
-            var snapShotDatabase = GetDatabaseAsset(guid);
-            return snapShotDatabase.BlendShapeSnapshots[index];
+            if (!TryGetSnapshot(smr, index, out BlendShapeSnapshotDatabase.BlendShapeSnapshot snapshot))
+                return null;
+
+            return snapshot;
+        }
+
+        public bool TryGetSnapshot(SkinnedMeshRenderer smr, int index, out BlendShapeSnapshotDatabase.BlendShapeSnapshot snapshot)
+        {
+            snapshot = null;
+
+            if (!TryGetSnapshotDatabase(smr, out BlendShapeSnapshotDatabase snapShotDatabase))
+                return false;
+
+            if (index < 0 || index >= snapShotDatabase.BlendShapeSnapshots.Count)
+                return false;
+
+            snapshot = snapShotDatabase.BlendShapeSnapshots[index];
+            return snapshot != null;
         }
     }
 }

@@ -64,11 +64,11 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
 
         public void ApplySnapshot(BlendShapeSnapshotDatabase.BlendShapeSnapshot blendShapeSnapshot)
         {
-            if (m_previewSkinnedMeshRenderer == null)
+            if (blendShapeSnapshot == null || m_previewSkinnedMeshRenderer == null || m_previewSkinnedMeshRenderer.sharedMesh == null)
                 return;
             
             blendShapeSnapshot.ApplySnapshot(m_previewSkinnedMeshRenderer);
-            m_orchestrator.Render();
+            m_orchestrator?.Render();
         }
 
         void IEditorWindowModule.Initialize(IEditorWindowOrchestrator orchestrator)
@@ -141,7 +141,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             previewCamera.orthographic = sourceCamera.orthographic;
             previewCamera.orthographicSize = sourceCamera.orthographicSize;
 
-            m_orchestrator.Render();
+            m_orchestrator?.Render();
         }
 
         private void SyncPreviewLightFromScene()
