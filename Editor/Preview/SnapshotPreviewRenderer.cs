@@ -6,19 +6,34 @@ using Object = UnityEngine.Object;
 
 namespace SnowyWalk.BlendShapeSnapshot.Editor
 {
-    public class SnapshotPreviewRenderer : IEditorWindowModule
+    public sealed class SnapshotPreviewRenderer
     {
-        private IEditorWindowOrchestrator m_orchestrator;
+        private readonly Action m_invalidatePreview;
 
         private PreviewRenderUtility m_previewRenderUtility;
         private SkinnedMeshRenderer m_previewSkinnedMeshRenderer;
 
         private bool HasPreviewTarget => m_previewRenderUtility != null;
 
+        public SnapshotPreviewRenderer(Action invalidatePreview)
+        {
+            m_invalidatePreview = invalidatePreview;
+        }
+
+        public void OnEnable()
+        {
+            SceneView.duringSceneGui += OnSceneViewUpdate;
+        }
+
+        public void OnDisable()
+        {
+            SceneView.duringSceneGui -= OnSceneViewUpdate;
+            Cleanup();
+        }
+
         public void CreatePreviewTarget(SkinnedMeshRenderer targetSkinnedMeshRenderer)
         {
-            m_previewRenderUtility?.Cleanup();
-            m_previewRenderUtility = null;
+            Cleanup();
 
             if (targetSkinnedMeshRenderer == null)
                 return;
@@ -36,16 +51,15 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             SyncPreviewLightFromScene();
         }
 
-        public void Render(Rect rt)
+        public void Render(Rect rect)
         {
             if (!HasPreviewTarget)
                 return;
 
             try
             {
-                m_previewRenderUtility.BeginPreview(rt, GUIStyle.none);
+                m_previewRenderUtility.BeginPreview(rect, GUIStyle.none);
 
-                // 안티앨리어싱 적용
                 RenderTexture previewCamRenderTexture = m_previewRenderUtility.camera.targetTexture;
                 if (previewCamRenderTexture?.antiAliasing == 0)
                 {
@@ -58,33 +72,21 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             }
             finally
             {
-                m_previewRenderUtility.EndAndDrawPreview(rt);
+                m_previewRenderUtility.EndAndDrawPreview(rect);
             }
         }
 
-        public void ApplySnapshot(BlendShapeSnapshotDatabase.BlendShapeSnapshot blendShapeSnapshot)
+        public void ApplySnapshot(BlendShapeSnapshotDatabase.BlendShapeSnapshot snapshot)
         {
-            if (blendShapeSnapshot == null || m_previewSkinnedMeshRenderer == null || m_previewSkinnedMeshRenderer.sharedMesh == null)
+            if (snapshot == null || m_previewSkinnedMeshRenderer == null || m_previewSkinnedMeshRenderer.sharedMesh == null)
                 return;
-            
-            blendShapeSnapshot.ApplySnapshot(m_previewSkinnedMeshRenderer);
-            m_orchestrator?.Render();
+
+            snapshot.ApplySnapshot(m_previewSkinnedMeshRenderer);
+            m_invalidatePreview?.Invoke();
         }
 
-        void IEditorWindowModule.Initialize(IEditorWindowOrchestrator orchestrator)
+        private void Cleanup()
         {
-            m_orchestrator = orchestrator;
-        }
-
-        void IEditorWindowModule.OnEnable()
-        {
-            SceneView.duringSceneGui += OnSceneViewUpdate;
-        }
-
-        void IEditorWindowModule.OnDisable()
-        {
-            SceneView.duringSceneGui -= OnSceneViewUpdate;
-
             m_previewRenderUtility?.Cleanup();
             m_previewRenderUtility = null;
             m_previewSkinnedMeshRenderer = null;
@@ -109,19 +111,17 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
 
             sourceCamera.transform.GetPositionAndRotation(out Vector3 camPos, out Quaternion camAngle);
             previewCamera.transform.GetPositionAndRotation(out Vector3 previewCamPos, out Quaternion previewCamAngle);
-            
-            // Check TR
+
             if (camPos != previewCamPos || camAngle != previewCamAngle)
                 return true;
-            
-            // Check FOV, Near, Far, Ortho
+
             if (!Mathf.Approximately(previewCamera.fieldOfView, sourceCamera.fieldOfView) ||
                 !Mathf.Approximately(previewCamera.nearClipPlane, sourceCamera.nearClipPlane) ||
                 !Mathf.Approximately(previewCamera.farClipPlane, sourceCamera.farClipPlane) ||
                 previewCamera.orthographic != sourceCamera.orthographic ||
                 !Mathf.Approximately(previewCamera.orthographicSize, sourceCamera.orthographicSize))
                 return true;
-            
+
             return false;
         }
 
@@ -132,7 +132,6 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
                 return;
 
             Camera previewCamera = m_previewRenderUtility.camera;
-
             Transform cameraTransform = sourceCamera.transform;
             previewCamera.transform.SetPositionAndRotation(cameraTransform.position, cameraTransform.rotation);
             previewCamera.fieldOfView = sourceCamera.fieldOfView;
@@ -141,7 +140,7 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             previewCamera.orthographic = sourceCamera.orthographic;
             previewCamera.orthographicSize = sourceCamera.orthographicSize;
 
-            m_orchestrator?.Render();
+            m_invalidatePreview?.Invoke();
         }
 
         private void SyncPreviewLightFromScene()
@@ -174,7 +173,6 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
         private static Light FindMainSceneLight()
         {
             Light[] lights = Object.FindObjectsByType<Light>(FindObjectsSortMode.None);
-
             foreach (Light light in lights)
             {
                 if (!light.enabled || !light.gameObject.activeInHierarchy)
@@ -187,22 +185,22 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             return null;
         }
 
-        private GameObject GetRootGameObject(Transform targetTransform)
+        private static GameObject GetRootGameObject(Transform targetTransform)
         {
             while (targetTransform.parent != null && !IsAvatarRoot())
                 targetTransform = targetTransform.parent;
+
             return targetTransform.gameObject;
 
             bool IsAvatarRoot()
             {
-                // TODO: SDK 연동
                 return false;
             }
         }
 
-        private SkinnedMeshRenderer FindMatchingRendererInClone(GameObject sourceRoot, SkinnedMeshRenderer sourceRenderer, GameObject cloneRoot)
+        private static SkinnedMeshRenderer FindMatchingRendererInClone(GameObject sourceRoot, SkinnedMeshRenderer sourceRenderer, GameObject cloneRoot)
         {
-            var path = GetSiblingIndexPath(sourceRoot.transform, sourceRenderer.transform);
+            List<int> path = GetSiblingIndexPath(sourceRoot.transform, sourceRenderer.transform);
 
             Transform current = cloneRoot.transform;
             foreach (int siblingIndex in path)
@@ -214,23 +212,21 @@ namespace SnowyWalk.BlendShapeSnapshot.Editor
             }
 
             return current.GetComponent<SkinnedMeshRenderer>();
+        }
 
-            List<int> GetSiblingIndexPath(Transform root, Transform target)
+        private static List<int> GetSiblingIndexPath(Transform root, Transform target)
+        {
+            List<int> path = new List<int>();
+
+            Transform current = target;
+            while (current != null && current != root)
             {
-                var path = new List<int>();
-
-                Transform current = target;
-                while (current != null && current != root)
-                {
-                    path.Add(current.GetSiblingIndex());
-                    current = current.parent;
-                }
-
-                path.Reverse();
-                return path;
+                path.Add(current.GetSiblingIndex());
+                current = current.parent;
             }
+
+            path.Reverse();
+            return path;
         }
     }
-
-
 }

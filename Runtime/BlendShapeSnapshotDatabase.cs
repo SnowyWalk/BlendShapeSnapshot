@@ -76,5 +76,13 @@ namespace SnowyWalk.BlendShapeSnapshot
             BlendShapeSnapshot snapshot = new BlendShapeSnapshot(smr, description);
             m_blendShapeSnapshotList.Add(snapshot);
         }
+
+        public void RemoveSnapshotAt(int index)
+        {
+            if (index < 0 || index >= m_blendShapeSnapshotList.Count)
+                return;
+
+            m_blendShapeSnapshotList.RemoveAt(index);
+        }
     }
 }
